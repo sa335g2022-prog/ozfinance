@@ -66,7 +66,7 @@ export async function registerFcmServiceWorker(): Promise<ServiceWorkerRegistrat
 }
 
 export async function requestAndRegisterPushToken(params: {
-  uid: string;
+  uid?: string;
   custId: string;
   role: 'admin' | 'customer';
   soundEnabled?: boolean;
@@ -109,7 +109,7 @@ export async function requestAndRegisterPushToken(params: {
       token: null,
       vapidConfigured: Boolean(vapidKey),
       serviceWorkerActive: Boolean(swReg),
-      error: 'FCM Messaging atau Service Worker tidak didukung di perangkat/browser ini.',
+      error: 'Notifikasi suara & browser aktif (Service Worker tidak tersedia di mode ini).',
     };
   }
 
@@ -128,35 +128,36 @@ export async function requestAndRegisterPushToken(params: {
         token: null,
         vapidConfigured: Boolean(vapidKey),
         serviceWorkerActive: true,
-        error: 'Notifikasi aktif melalui Service Worker browser (token FCM eksternal belum tersedia).',
       };
     }
 
-    const tokenId = `${params.uid}_${params.role}_${token.slice(0, 24).replace(/[^a-zA-Z0-9_\-]/g, '')}`;
-    const docRef = doc(db, 'deviceTokens', tokenId);
-    const existing = await getDoc(docRef);
-    const soundPref = params.soundEnabled ?? loadSoundEnabledPref();
+    if (params.uid) {
+      const tokenId = `${params.uid}_${params.role}_${token.slice(0, 24).replace(/[^a-zA-Z0-9_\-]/g, '')}`;
+      const docRef = doc(db, 'deviceTokens', tokenId);
+      const existing = await getDoc(docRef);
+      const soundPref = params.soundEnabled ?? loadSoundEnabledPref();
 
-    await setDoc(
-      docRef,
-      {
-        tokenId,
-        userId: params.uid,
-        custId: params.custId,
-        role: params.role,
-        fcmToken: token,
-        platform: navigator.userAgent.slice(0, 60) || 'web',
-        soundEnabled: soundPref,
-        createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+      await setDoc(
+        docRef,
+        {
+          tokenId,
+          userId: params.uid,
+          custId: params.custId,
+          role: params.role,
+          fcmToken: token,
+          platform: navigator.userAgent.slice(0, 60) || 'web',
+          soundEnabled: soundPref,
+          createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-    try {
-      localStorage.setItem(TOKEN_STORAGE_KEY, tokenId);
-    } catch {
-      // Ignore
+      try {
+        localStorage.setItem(TOKEN_STORAGE_KEY, tokenId);
+      } catch {
+        // Ignore
+      }
     }
 
     return {
@@ -173,7 +174,6 @@ export async function requestAndRegisterPushToken(params: {
       token: null,
       vapidConfigured: Boolean(vapidKey),
       serviceWorkerActive: Boolean(swReg),
-      error: 'Notifikasi browser & Service Worker aktif (sinkronisasi real-time Firestore siap).',
     };
   }
 }

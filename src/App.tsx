@@ -50,7 +50,7 @@ import {
   saveTheme,
   unlockAudioContext,
 } from './utils/storage';
-import { testConnection } from './lib/firebase';
+import { HAS_VALID_FIREBASE_CONFIG, testConnection } from './lib/firebase';
 import {
   OWNER_ADMIN_EMAIL,
   deleteCustomerFromFirestore,
@@ -90,6 +90,7 @@ import {
   markAllUserNotificationsRead,
   markNotificationAsRead,
   playCategoryNotificationSound,
+  preloadCustomSounds,
   saveSoundEnabledPref,
   subscribeUserNotifications,
   type FirestoreNotification,
@@ -107,6 +108,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { GuestView } from './components/GuestView';
 import { CustomerView } from './components/CustomerView';
 import { AdminView } from './components/AdminView';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import {
   AdminPayModal,
   AdminSavingsModal,
@@ -282,6 +284,7 @@ function AppInner() {
   // Firebase Cloud States
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [firebaseRole, setFirebaseRole] = useState<'admin' | 'customer' | null>(null);
+  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(HAS_VALID_FIREBASE_CONFIG);
   const [firestoreConversations, setFirestoreConversations] = useState<FirestoreConversation[]>(
     []
   );
@@ -311,6 +314,8 @@ function AppInner() {
   const inFlightPaymentIdsRef = useRef<Set<string>>(new Set());
   const seenFirestoreNotifIdsRef = useRef<Set<string>>(new Set());
   const initialNotifLoadDoneRef = useRef<boolean>(false);
+  const prevUnreadCountsRef = useRef<Record<string, UnreadChatPair>>({});
+  const initialConvLoadDoneRef = useRef<boolean>(false);
 
   const [swipeIndicator, setSwipeIndicator] = useState<'left' | 'right' | null>(null);
   const lastHomeBackTimeRef = useRef<number>(0);
@@ -351,9 +356,12 @@ function AppInner() {
     return () => document.removeEventListener('pointerdown', onFirstPointer);
   }, []);
 
-  // Initial Firebase connectivity check & FCM service worker registration
+  // Initial Firebase connectivity check, custom audio preload & FCM service worker registration
   useEffect(() => {
-    void testConnection();
+    void testConnection().then((status) => {
+      if (status.connected) setFirebaseConnected(true);
+    });
+    void preloadCustomSounds();
     void registerFcmServiceWorker();
   }, []);
 
@@ -534,6 +542,29 @@ function AppInner() {
         { role: firebaseRole, uid: firebaseUser.uid },
         (convs) => {
           setFirestoreConversations(convs);
+          if (initialConvLoadDoneRef.current) {
+            const hasIncomingChat = convs.some((c) => {
+              const prev = prevUnreadCountsRef.current[c.conversationId];
+              return firebaseRole === 'admin'
+                ? c.unreadAdmin > (prev?.admin ?? 0)
+                : c.unreadCustomer > (prev?.customer ?? 0);
+            });
+            if (hasIncomingChat) {
+              playCategoryNotificationSound('CHAT_MESSAGE', soundEnabled);
+            }
+          } else {
+            initialConvLoadDoneRef.current = true;
+          }
+
+          const snapshotMap: Record<string, UnreadChatPair> = {};
+          convs.forEach((c) => {
+            snapshotMap[c.conversationId] = {
+              admin: c.unreadAdmin,
+              customer: c.unreadCustomer,
+            };
+          });
+          prevUnreadCountsRef.current = snapshotMap;
+
           setUnreadChatMap((prev) => {
             const next = { ...prev };
             for (const c of convs) {
@@ -878,24 +909,57 @@ function AppInner() {
   }, [firebaseUser, showToast]);
 
   const handleEnablePush = useCallback(async () => {
-    if (!firebaseUser) {
-      showToast('Masuk dengan Google (Firebase) terlebih dahulu untuk menyimpan token perangkat.');
-      return;
-    }
-    const role: 'admin' | 'customer' = firebaseRole === 'admin' ? 'admin' : 'customer';
+    const role: 'admin' | 'customer' =
+      currentView === 'admin' || firebaseRole === 'admin' ? 'admin' : 'customer';
     const res = await requestAndRegisterPushToken({
-      uid: firebaseUser.uid,
+      uid: firebaseUser?.uid,
       custId: role === 'admin' ? 'ADM-001' : activeCustomer.id,
       role,
       soundEnabled,
     });
     setPushStatus(res);
     if (res.token) {
-      showToast('Web Push Notification FCM aktif pada perangkat ini!');
+      showToast('Push Notification Firebase aktif pada perangkat ini!');
+    } else if (res.permission === 'granted') {
+      showToast('Notifikasi perangkat & suara aktif!');
     } else if (res.error) {
       showToast(res.error);
     }
-  }, [activeCustomer.id, firebaseRole, firebaseUser, showToast, soundEnabled]);
+  }, [activeCustomer.id, currentView, firebaseRole, firebaseUser?.uid, showToast, soundEnabled]);
+
+  const handleLinkFirebaseGoogle = useCallback(async () => {
+    try {
+      const user = await signInWithFirebaseGoogle();
+      setFirebaseConnected(true);
+      const isEmailAdmin = isTrustedAdminEmail(user.email, user.emailVerified);
+      if (isEmailAdmin) {
+        await seedFirestoreIfEmpty(user.uid);
+      } else if (currentView === 'customer') {
+        await linkCustomerUidByWhatsapp(customers, activeCustomer.whatsapp, user.uid);
+      }
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const res = await requestAndRegisterPushToken({
+          uid: user.uid,
+          custId: currentView === 'admin' ? 'ADM-001' : activeCustomer.id,
+          role: currentView === 'admin' ? 'admin' : 'customer',
+          soundEnabled,
+        });
+        setPushStatus(res);
+      }
+      showToast(`Akun Firebase terhubung: ${user.email || user.uid}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('auth/unauthorized-domain')) {
+        showToast(
+          `Domain ${window.location.hostname} perlu ditambahkan ke Authorized Domains di Firebase Console.`
+        );
+      } else if (msg.includes('popup-closed-by-user')) {
+        showToast('Penautan akun Google dibatalkan.');
+      } else {
+        showToast(msg || 'Gagal menautkan akun Google Firebase.');
+      }
+    }
+  }, [activeCustomer.id, activeCustomer.whatsapp, currentView, customers, showToast, soundEnabled]);
 
   // Navigation & Auth handlers
   const handleLogin = useCallback(
@@ -920,9 +984,31 @@ function AppInner() {
       setCurrentView(session.role);
       window.scrollTo({ top: 0, behavior: 'auto' });
 
+      void testConnection().then((status) => {
+        if (status.connected) setFirebaseConnected(true);
+      });
+      void registerFcmServiceWorker();
+      void preloadCustomSounds();
+
+      if (firebaseUser) {
+        if (session.role === 'admin' && isTrustedAdminEmail(firebaseUser.email, firebaseUser.emailVerified)) {
+          void seedFirestoreIfEmpty(firebaseUser.uid).catch(() => undefined);
+        } else if (session.role === 'customer') {
+          void linkCustomerUidByWhatsapp(customers, resolvedWa || '', firebaseUser.uid);
+        }
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          void requestAndRegisterPushToken({
+            uid: firebaseUser.uid,
+            custId: session.role === 'admin' ? 'ADM-001' : resolvedId,
+            role: session.role,
+            soundEnabled,
+          }).then(setPushStatus);
+        }
+      }
+
       if (session.role === 'admin') {
         setAdminPage('a-dashboard');
-        showToast('Login aktif: Panel Admin Operasional.');
+        showToast('Login aktif: Panel Admin Operasional & Firebase Siap.');
       } else {
         setActiveCustomerId(resolvedId);
         setDisplayName(resolvedName);
@@ -931,9 +1017,6 @@ function AppInner() {
         if (hasUnread) {
           playCategoryNotificationSound('TRANSACTION_ALERT', soundEnabled);
           setBellUrgentKey((k) => k + 1);
-        }
-        if (firebaseUser) {
-          void linkCustomerUidByWhatsapp(customers, resolvedWa || '', firebaseUser.uid);
         }
         showToast(`Selamat datang kembali, ${resolvedName} (${resolvedId})!`);
       }
@@ -1259,6 +1342,14 @@ function AppInner() {
         },
         ...prev,
       ]);
+      pushCustomerNotification({
+        custId: activeCustomer.id,
+        category: 'sav',
+        title: 'Setoran Tabungan Berhasil',
+        desc: `Setoran tabungan ${formatRupiah(amount)} (${program}) berhasil dicatat ke rekening Anda.`,
+        playSound: true,
+        soundCategory: 'TRANSACTION_ALERT',
+      });
       setActiveModal(null);
       showToast(`Setoran tabungan ${formatRupiah(amount)} berhasil ditambahkan!`);
     },
@@ -1270,6 +1361,7 @@ function AppInner() {
       defaultSavingsFreq,
       firebaseRole,
       firebaseUser,
+      pushCustomerNotification,
       showToast,
     ]
   );
@@ -2302,12 +2394,13 @@ function AppInner() {
           soundEnabled={soundEnabled}
           onToggleSound={handleToggleSound}
           pushPermission={pushStatus?.permission}
-          onEnablePush={firebaseUser ? () => void handleEnablePush() : undefined}
+          onEnablePush={() => void handleEnablePush()}
           onTestChime={() => {
             playCategoryNotificationSound('TRANSACTION_ALERT', true);
             setBellUrgentKey((k) => k + 1);
-            showToast('Nada notifikasi diputar.');
+            showToast('Nada pemberitahuan diputar.');
           }}
+          onToast={showToast}
           onMarkAllRead={() => {
             setNotifications((prev) => {
               const next = prev.map((n) =>
@@ -2359,6 +2452,8 @@ function AppInner() {
           displayName={displayName}
           officialName={activeCustomer.officialName}
           firebaseEmail={firebaseUser?.email ?? null}
+          firebaseConnected={firebaseConnected}
+          onLinkFirebaseGoogle={handleLinkFirebaseGoogle}
           soundEnabled={soundEnabled}
           onToggleSound={handleToggleSound}
           pushStatus={pushStatus}
@@ -2462,6 +2557,9 @@ function AppInner() {
           onClose={() => setActiveModal(null)}
         />
       )}
+
+      {/* PWA Smart Auto Install Banner */}
+      <PWAInstallBanner />
 
       {/* Toast Notification */}
       {toastMsg && (

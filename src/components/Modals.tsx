@@ -13,12 +13,14 @@ import {
   KeyRound,
   LogOut,
   Mail,
+  Music,
   Phone,
   Plus,
   RotateCcw,
   RotateCw,
   Shield,
   Trash2,
+  Upload,
   User,
   Volume2,
   VolumeX,
@@ -26,6 +28,14 @@ import {
   X,
 } from 'lucide-react';
 import type { PushSetupStatus } from '../lib/firebase-messaging';
+import {
+  clearDeviceSound,
+  loadCustomSoundMeta,
+  playCategoryNotificationSound,
+  saveDeviceSound,
+  type CustomSoundMeta,
+  type SoundChannel,
+} from '../lib/notifications';
 import type {
   CustomerNotification,
   CustomerRegistryItem,
@@ -99,6 +109,143 @@ const ModalShell: React.FC<ModalShellProps> = ({
   );
 };
 
+interface DeviceSoundControlsProps {
+  soundEnabled: boolean;
+  onToast: (msg: string) => void;
+}
+
+const DeviceSoundControls: React.FC<DeviceSoundControlsProps> = ({ soundEnabled, onToast }) => {
+  const [soundMeta, setSoundMeta] = useState<Record<SoundChannel, CustomSoundMeta | null>>(() =>
+    loadCustomSoundMeta()
+  );
+  const chatAudioRef = useRef<HTMLInputElement | null>(null);
+  const alertAudioRef = useRef<HTMLInputElement | null>(null);
+
+  const handleUploadSound = async (channel: SoundChannel, file?: File | null) => {
+    if (!file) return;
+    try {
+      const saved = await saveDeviceSound(channel, file);
+      setSoundMeta(loadCustomSoundMeta());
+      playCategoryNotificationSound(
+        channel === 'chat' ? 'CHAT_MESSAGE' : 'TRANSACTION_ALERT',
+        true
+      );
+      onToast(
+        `Nada ${channel === 'chat' ? 'Pesan' : 'Pemberitahuan'} diubah ke "${saved.name}".`
+      );
+    } catch (err) {
+      onToast(err instanceof Error ? err.message : 'Gagal memuat nada perangkat.');
+    }
+  };
+
+  const handleResetSound = async (channel: SoundChannel) => {
+    await clearDeviceSound(channel);
+    setSoundMeta(loadCustomSoundMeta());
+    onToast(
+      `Nada ${channel === 'chat' ? 'Pesan' : 'Pemberitahuan'} dikembalikan ke nada bawaan.`
+    );
+  };
+
+  const rows: {
+    channel: SoundChannel;
+    label: string;
+    defaultLabel: string;
+    category: 'CHAT_MESSAGE' | 'TRANSACTION_ALERT';
+    inputRef: React.RefObject<HTMLInputElement | null>;
+    testIdUpload: string;
+    testIdTest: string;
+  }[] = [
+    {
+      channel: 'chat',
+      label: 'Nada Pesan (Chat)',
+      defaultLabel: 'Nada Bawaan Pesan',
+      category: 'CHAT_MESSAGE',
+      inputRef: chatAudioRef,
+      testIdUpload: 'upload-chat-sound-input',
+      testIdTest: 'test-chat-sound-btn',
+    },
+    {
+      channel: 'alert',
+      label: 'Nada Pemberitahuan',
+      defaultLabel: 'Nada Bawaan Pemberitahuan',
+      category: 'TRANSACTION_ALERT',
+      inputRef: alertAudioRef,
+      testIdUpload: 'upload-alert-sound-input',
+      testIdTest: 'test-alert-sound-btn',
+    },
+  ];
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700/80">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1.5">
+          <Music className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span>Nada Notifikasi (Pesan vs Pemberitahuan)</span>
+        </span>
+      </div>
+
+      {rows.map((row) => {
+        const current = soundMeta[row.channel];
+        return (
+          <div
+            key={row.channel}
+            className="p-2.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+          >
+            <div className="min-w-0 flex-1">
+              <strong className="block text-[11px] font-bold text-slate-900 dark:text-white">
+                {row.label}
+              </strong>
+              <span className="block text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                {current ? current.name : row.defaultLabel}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+              <input
+                ref={row.inputRef}
+                type="file"
+                accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+                data-testid={row.testIdUpload}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  void handleUploadSound(row.channel, file);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                data-testid={row.testIdTest}
+                onClick={() => playCategoryNotificationSound(row.category, soundEnabled || true)}
+                className="min-h-[30px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-semibold text-slate-700 dark:text-slate-200 hover:border-blue-500"
+              >
+                Tes
+              </button>
+              <button
+                type="button"
+                onClick={() => row.inputRef.current?.click()}
+                className="min-h-[30px] px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-[10px] font-bold text-blue-700 dark:text-blue-300 inline-flex items-center gap-1 hover:border-blue-500"
+              >
+                <Upload className="w-3 h-3" />
+                <span>Dari Perangkat</span>
+              </button>
+              {current && (
+                <button
+                  type="button"
+                  onClick={() => void handleResetSound(row.channel)}
+                  className="min-h-[30px] px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900 text-[10px] font-semibold text-rose-600 dark:text-rose-400"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /* =====================================================================
    1. CUSTOMER NOTIFICATION CENTER MODAL
    ===================================================================== */
@@ -112,6 +259,7 @@ interface NotifCenterModalProps {
   onMarkAllRead: () => void;
   onMarkSingleRead: (id: string) => void;
   onOpenTarget?: (notif: CustomerNotification) => void;
+  onToast?: (msg: string) => void;
   onClose: () => void;
 }
 
@@ -125,8 +273,11 @@ export const NotifCenterModal: React.FC<NotifCenterModalProps> = ({
   onMarkAllRead,
   onMarkSingleRead,
   onOpenTarget,
+  onToast,
   onClose,
 }) => {
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+
   return (
     <ModalShell
       title="Pemberitahuan"
@@ -151,11 +302,11 @@ export const NotifCenterModal: React.FC<NotifCenterModalProps> = ({
           )}
           <button
             type="button"
-            onClick={onTestChime}
+            onClick={() => setShowSoundPicker((v) => !v)}
             className="min-h-[34px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1 hover:border-blue-500"
           >
-            <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Tes Nada</span>
+            <Music className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Nada</span>
           </button>
           <button
             type="button"
@@ -167,6 +318,27 @@ export const NotifCenterModal: React.FC<NotifCenterModalProps> = ({
         </>
       }
     >
+      {showSoundPicker && (
+        <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              Uji &amp; Tambah Nada dari Perangkat
+            </span>
+            <button
+              type="button"
+              onClick={onTestChime}
+              className="px-2 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-bold"
+            >
+              Tes Pemberitahuan
+            </button>
+          </div>
+          <DeviceSoundControls
+            soundEnabled={soundEnabled}
+            onToast={onToast ?? (() => undefined)}
+          />
+        </div>
+      )}
+
       {onEnablePush && pushPermission !== 'granted' && pushPermission !== 'unsupported' && (
         <div className="mb-3 p-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -260,6 +432,8 @@ interface ProfileModalProps {
   displayName: string;
   officialName: string;
   firebaseEmail?: string | null;
+  firebaseConnected?: boolean;
+  onLinkFirebaseGoogle?: () => Promise<void> | void;
   soundEnabled?: boolean;
   onToggleSound?: () => void;
   pushStatus?: PushSetupStatus | null;
@@ -280,6 +454,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   displayName,
   officialName,
   firebaseEmail,
+  firebaseConnected = true,
+  onLinkFirebaseGoogle,
   soundEnabled = true,
   onToggleSound,
   pushStatus,
@@ -708,7 +884,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         </div>
 
         {/* Firebase Cloud & Push Notification Preferences */}
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <Cloud className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -716,8 +892,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 Firebase Cloud &amp; Notifikasi
               </strong>
             </div>
-            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate">
-              {firebaseEmail || 'Mode Sesi Lokal'}
+            <span
+              data-testid="profile-firebase-status"
+              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 truncate"
+            >
+              {firebaseEmail
+                ? firebaseEmail
+                : firebaseConnected
+                ? 'Firebase Terhubung'
+                : 'Sinkronisasi Siap'}
             </span>
           </div>
 
@@ -749,8 +932,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <span>
                   {pushStatus?.token
                     ? 'Push FCM Aktif'
+                    : pushStatus?.permission === 'granted'
+                    ? 'Push Perangkat Aktif'
                     : 'Aktifkan Push Notification'}
                 </span>
+              </button>
+            )}
+
+            {!firebaseEmail && onLinkFirebaseGoogle && (
+              <button
+                type="button"
+                data-testid="profile-link-google-btn"
+                onClick={() => void onLinkFirebaseGoogle()}
+                className="min-h-[36px] px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-bold inline-flex items-center gap-1.5 hover:border-blue-500"
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Tautkan Akun Google UID</span>
               </button>
             )}
           </div>
@@ -760,6 +957,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {pushStatus.error}
             </p>
           )}
+
+          <DeviceSoundControls soundEnabled={soundEnabled} onToast={onToast} />
         </div>
       </div>
 
@@ -1180,12 +1379,13 @@ interface DepositModalProps {
 }
 
 export const DepositModal: React.FC<DepositModalProps> = ({ onSubmit, onClose }) => {
-  const [amount, setAmount] = useState(250000);
+  const [amountInput, setAmountInput] = useState('250000');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (amount <= 0) return;
-    onSubmit(amount);
+    const numeric = Number(amountInput);
+    if (!Number.isFinite(numeric) || numeric <= 0) return;
+    onSubmit(numeric);
   };
 
   return (
@@ -1196,15 +1396,18 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onSubmit, onClose })
             htmlFor="deposit-amount"
             className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5"
           >
-            Nominal Setoran (Rp)
+            Nominal Setoran (Rp) — Nominal Bebas Tanpa Batas
           </label>
           <input
             id="deposit-amount"
+            data-testid="cust-deposit-amount-input"
             type="number"
-            min={10000}
-            step={5000}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            inputMode="numeric"
+            min={1}
+            step="any"
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
+            placeholder="Masukkan nominal setor berapapun"
             required
             className="w-full min-h-[42px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
           />
@@ -1215,7 +1418,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onSubmit, onClose })
             <button
               key={val}
               type="button"
-              onClick={() => setAmount(val)}
+              onClick={() => setAmountInput(String(val))}
               className="min-h-[38px] px-2 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 text-xs font-semibold text-slate-700 dark:text-slate-200"
             >
               Rp {val / 1000} rb
@@ -1387,13 +1590,14 @@ export const AdminSavingsModal: React.FC<AdminSavingsModalProps> = ({
     accounts.some((a) => a.id === initialCustId) ? initialCustId : (accounts[0]?.id ?? '')
   );
   const [txType, setTxType] = useState<'setor' | 'tarik'>(initialTxType);
-  const [amount, setAmount] = useState(250000);
+  const [amountInput, setAmountInput] = useState('250000');
   const [note, setNote] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!custId || amount <= 0) return;
-    onSubmit(custId, txType, amount, note.trim());
+    const numeric = Number(amountInput);
+    if (!custId || !Number.isFinite(numeric) || numeric <= 0) return;
+    onSubmit(custId, txType, numeric, note.trim());
   };
 
   return (
@@ -1453,15 +1657,18 @@ export const AdminSavingsModal: React.FC<AdminSavingsModalProps> = ({
             htmlFor="admin-sav-amount"
             className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
           >
-            Nominal Transaksi (Rp)
+            Nominal Transaksi (Rp) — Nominal Bebas Tanpa Batas
           </label>
           <input
             id="admin-sav-amount"
+            data-testid="admin-sav-amount-input"
             type="number"
-            min={10000}
-            step={5000}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            inputMode="numeric"
+            min={1}
+            step="any"
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
+            placeholder="Masukkan nominal berapapun"
             required
             className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
           />
@@ -1477,7 +1684,7 @@ export const AdminSavingsModal: React.FC<AdminSavingsModalProps> = ({
             <button
               key={p.val}
               type="button"
-              onClick={() => setAmount(p.val)}
+              onClick={() => setAmountInput(String(p.val))}
               className="min-h-[36px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 text-[11px] font-semibold"
             >
               {p.label}
