@@ -1,0 +1,528 @@
+{
+  "entities": {
+    "AdminEntry": {
+      "title": "AdminEntry",
+      "description": "Trusted administrator access record keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile with isolated PII and sound preference.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "nama": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "whatsapp": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "custId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "customer"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Aktif", "Nonaktif"]
+        },
+        "soundEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "nama", "email", "role", "status", "soundEnabled", "createdAt", "updatedAt"]
+    },
+    "CustomerRecord": {
+      "title": "CustomerRecord",
+      "description": "Official OZdigiFinance customer loan portfolio and contact registry.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "officialName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "whatsapp": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 32
+        },
+        "productLabel": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "activeLoan": {
+          "type": "number"
+        },
+        "monthlyInstallment": {
+          "type": "number"
+        },
+        "paidInstallments": {
+          "type": "number"
+        },
+        "totalInstallments": {
+          "type": "number"
+        },
+        "loanTenor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "remainingDebt": {
+          "type": "number"
+        },
+        "dueDateDay": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Aktif", "Berjalan"]
+        },
+        "loans": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerUid", "officialName", "whatsapp", "productLabel", "activeLoan", "monthlyInstallment", "paidInstallments", "totalInstallments", "loanTenor", "remainingDebt", "dueDateDay", "status", "loans", "updatedAt"]
+    },
+    "SavingsAccountRecord": {
+      "title": "SavingsAccountRecord",
+      "description": "Customer digital savings account record managed in Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "officialName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "whatsapp": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "program": {
+          "type": "string",
+          "enum": ["Menabung Harian", "Menabung Mingguan", "Menabung Bulanan"]
+        },
+        "routine": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "balance": {
+          "type": "number"
+        },
+        "lastDate": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Aktif", "Nonaktif"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerUid", "officialName", "whatsapp", "program", "routine", "balance", "lastDate", "status", "updatedAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Two-way conversation room between Admin and a single customer with per-role unread counters.",
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "adminId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "customerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "customerWhatsapp": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "lastMessage": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "unreadAdmin": {
+          "type": "number"
+        },
+        "unreadCustomer": {
+          "type": "number"
+        }
+      },
+      "required": ["conversationId", "adminId", "customerId", "customerUid", "customerName", "lastMessage", "lastMessageAt", "unreadAdmin", "unreadCustomer"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Real-time chat or automated system payment message inside a conversation.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "conversationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "senderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "senderRole": {
+          "type": "string",
+          "enum": ["admin", "customer", "system"]
+        },
+        "senderName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "messageType": {
+          "type": "string",
+          "enum": ["text", "system_payment", "image"]
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "transactionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "deliveredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "readAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["sent", "delivered", "read"]
+        }
+      },
+      "required": ["messageId", "conversationId", "customerUid", "senderId", "senderRole", "senderName", "message", "messageType", "createdAt", "status"]
+    },
+    "TransactionDoc": {
+      "title": "TransactionDoc",
+      "description": "Immutable official payment or savings transaction record keyed by idempotent transactionId.",
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "officialName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "adminId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "loanId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "nominal": {
+          "type": "number"
+        },
+        "tanggal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "jenisTransaksi": {
+          "type": "string",
+          "enum": ["loan", "savings", "payment_proof"]
+        },
+        "sisaTagihan": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Terverifikasi", "Berhasil", "Menunggu Verifikasi", "Menunggu"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["transactionId", "customerId", "customerUid", "officialName", "adminId", "description", "nominal", "tanggal", "jenisTransaksi", "sisaTagihan", "status", "createdAt"]
+    },
+    "NotificationDoc": {
+      "title": "NotificationDoc",
+      "description": "Per-recipient notification item linked to transactions or conversations.",
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "recipientId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "recipientUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "senderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "type": {
+          "type": "string",
+          "enum": ["CHAT_MESSAGE", "TRANSACTION_ALERT", "SAVINGS_ALERT", "SYSTEM_INFO"]
+        },
+        "transactionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "conversationId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "isRead": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["notificationId", "recipientId", "recipientUid", "senderId", "title", "body", "type", "isRead", "createdAt"]
+    },
+    "DeviceTokenDoc": {
+      "title": "DeviceTokenDoc",
+      "description": "FCM Web Push registration token bound strictly to one authenticated UID.",
+      "type": "object",
+      "properties": {
+        "tokenId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "custId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "customer"]
+        },
+        "fcmToken": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 512
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "soundEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["tokenId", "userId", "custId", "role", "fcmToken", "platform", "soundEnabled", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminEntry" },
+      "description": "Authoritative admin UID registry."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profiles with PII restricted to owner and admin."
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/CustomerRecord" },
+      "description": "Customer loan contracts and active balance registry."
+    },
+    "/savingsAccounts/{accountId}": {
+      "schema": { "$ref": "#/entities/SavingsAccountRecord" },
+      "description": "Customer savings accounts."
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Two-way conversation metadata and unread counts."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Subcollection of chat and automated system messages."
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/TransactionDoc" },
+      "description": "Official payment and savings transactions with idempotent ID."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationDoc" },
+      "description": "Per-recipient real-time notifications."
+    },
+    "/deviceTokens/{tokenId}": {
+      "schema": { "$ref": "#/entities/DeviceTokenDoc" },
+      "description": "FCM Web Push device tokens isolated per UID."
+    }
+  }
+}

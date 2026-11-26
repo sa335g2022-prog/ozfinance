@@ -1,0 +1,3475 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#edf3f8" id="theme-meta">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="OZdigiFinance">
+  <title>OZdigiFinance — Solusi Finansial Digital Anda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="manifest" href='data:application/manifest+json,{"name":"OZdigiFinance","short_name":"OZdigiFinance","start_url":".","display":"standalone","background_color":"#edf3f8","theme_color":"#2865c7","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 128 128%27%3E%3Crect width=%27128%27 height=%27128%27 rx=%2728%27 fill=%27%231c498e%27/%3E%3Ctext x=%2750%25%27 y=%2756%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27Arial,sans-serif%27 font-weight=%27900%27 font-size=%2756%27%3EOZ%3C/text%3E%3C/svg%3E","sizes":"128x128","type":"image/svg+xml"}]}'>
+  <style>
+    :root {
+      --bg: #edf3f8;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-solid: #ffffff;
+      --text: #172638;
+      --muted: #64748b;
+      --line: rgba(130, 151, 174, 0.22);
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --gold: #c89b42;
+      --green: #109468;
+      --red: #dc4c56;
+      --shadow: 0 12px 32px rgba(30, 58, 95, 0.08);
+      --brand-blue: #1e57b5;
+      --brand-blue-depth: #113470;
+      --brand-silver: #7c8999;
+      --brand-silver-depth: #485361;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --panel: rgba(24, 36, 56, 0.90);
+      --panel-solid: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --line: rgba(148, 163, 184, 0.16);
+      --blue: #60a5fa;
+      --blue-dark: #3b82f6;
+      --gold: #fbbf24;
+      --green: #34d399;
+      --red: #f87171;
+      --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+      --brand-blue: #60a5fa;
+      --brand-blue-depth: #1e40af;
+      --brand-silver: #cbd5e1;
+      --brand-silver-depth: #475569;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(59, 130, 246, 0.14), transparent 34%),
+        radial-gradient(circle at 92% 12%, rgba(200, 155, 66, 0.11), transparent 30%),
+        var(--bg);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    button, input, select, textarea { font-family: inherit; }
+    button { cursor: pointer; }
+
+    /* === VIEW ROOT (EXPLICIT BLOCK DISPLAY TO PREVENT BLANK SCREENS) === */
+    .view-root {
+      display: none;
+      width: 100%;
+      min-height: 100vh;
+    }
+    .view-root.active {
+      display: block;
+    }
+
+    /* === BRAND 3D TIMBUL & LETTER-BY-LETTER SHIMMER === */
+    .brand-3d {
+      display: inline-flex;
+      align-items: center;
+      font-weight: 900;
+      font-size: 21px;
+      letter-spacing: -0.6px;
+      line-height: 1.1;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .brand-3d .ch {
+      display: inline-block;
+      position: relative;
+      animation: letterShimmer 3.6s ease-in-out infinite;
+      animation-delay: calc(var(--i) * 0.14s);
+    }
+    .brand-3d .b-blue {
+      color: var(--brand-blue);
+      text-shadow:
+        0 1px 0 var(--brand-blue-depth),
+        0 2px 0 var(--brand-blue-depth),
+        0 3px 6px rgba(17, 52, 112, 0.32);
+    }
+    .brand-3d .b-silver {
+      color: var(--brand-silver);
+      text-shadow:
+        0 1px 0 var(--brand-silver-depth),
+        0 2px 0 var(--brand-silver-depth),
+        0 3px 6px rgba(30, 41, 59, 0.28);
+    }
+
+    @keyframes letterShimmer {
+      0%, 72%, 100% {
+        transform: translateY(0) scale(1);
+        filter: brightness(1);
+      }
+      14% {
+        transform: translateY(-2px) scale(1.06);
+        filter: brightness(1.42) drop-shadow(0 0 7px rgba(96, 165, 250, 0.65));
+      }
+      28% {
+        transform: translateY(0) scale(1);
+        filter: brightness(1.08);
+      }
+    }
+
+    /* === FRAMELESS HEADER ICONS & ANIMATED BELL === */
+    .icon-clean {
+      border: 0;
+      background: transparent;
+      padding: 6px;
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .icon-clean:hover {
+      transform: scale(1.1);
+      opacity: 0.85;
+    }
+
+    .bell-svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform-origin: 50% 15%;
+      animation: bellRing 2.8s ease-in-out infinite;
+    }
+    .bell-svg.ring-urgent {
+      animation: bellUrgent 0.65s ease-in-out 3;
+      color: var(--blue);
+    }
+    @keyframes bellRing {
+      0%, 60%, 100% { transform: rotate(0deg); }
+      65% { transform: rotate(16deg); }
+      70% { transform: rotate(-14deg); }
+      75% { transform: rotate(11deg); }
+      80% { transform: rotate(-8deg); }
+      85% { transform: rotate(5deg); }
+      90% { transform: rotate(0deg); }
+    }
+    @keyframes bellUrgent {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(22deg) scale(1.15); }
+      40% { transform: rotate(-20deg) scale(1.15); }
+      60% { transform: rotate(16deg) scale(1.1); }
+      80% { transform: rotate(-12deg) scale(1.05); }
+    }
+
+    .bell-badge {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 6px rgba(220, 76, 86, 0.45);
+    }
+    .bell-badge.hidden {
+      display: none;
+    }
+
+    /* === PROFILE AVATAR (52x52 DESKTOP, 44x44 MOBILE) === */
+    .profile-trigger {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(37, 99, 235, 0.35);
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      color: #1e40af;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 0;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.16);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .profile-trigger:hover {
+      transform: scale(1.05);
+      border-color: var(--blue);
+    }
+    .profile-trigger img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* === APP SHELL (SIDEBAR + FIXED TOPBAR + MAIN CONTENT) === */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 246px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-right: 1px solid var(--line);
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      z-index: 25;
+    }
+    .sidebar-brand {
+      padding: 4px 8px 22px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+    .sidebar-brand small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .nav-group-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      padding: 10px 12px 6px;
+    }
+    .side-nav {
+      display: grid;
+      gap: 4px;
+    }
+    .side-nav button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 11px 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 600;
+      font-size: 13px;
+      text-align: left;
+      transition: all 0.18s ease;
+    }
+    .side-nav button:hover,
+    .side-nav button.active {
+      background: linear-gradient(100deg, rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.05));
+      color: var(--blue);
+    }
+    .side-nav .ico {
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+    }
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .app-topbar {
+      position: fixed;
+      top: 0;
+      left: 246px;
+      right: 0;
+      z-index: 24;
+      height: 72px;
+      padding: 0 28px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .mobile-brand-slot { display: none; }
+    .topbar-left-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .mode-chip {
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--blue);
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-left: auto;
+    }
+
+    /* MAIN CONTENT AREA - 100% VISIBLE & PADDED CLEAR OF FIXED TOPBAR & BOTTOM NAV */
+    .app-content {
+      display: block;
+      margin-left: 246px;
+      width: calc(100% - 246px);
+      max-width: 1440px;
+      padding: 92px 28px 42px;
+    }
+
+    /* SUBPAGES */
+    .subpage {
+      display: none;
+      width: 100%;
+    }
+    .subpage.active {
+      display: block;
+      animation: fadeUp 0.22s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === CARDS & REUSABLE UI === */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 18px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .card-head h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 750;
+    }
+    .muted { color: var(--muted); }
+    .text-sm { font-size: 12px; }
+    .text-xs { font-size: 11px; }
+
+    .btn-primary {
+      border: 0;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn-primary:hover { transform: translateY(-1px); opacity: 0.95; }
+
+    .btn-secondary {
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 650;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+
+    .btn-danger {
+      border: 1px solid rgba(220, 76, 86, 0.35);
+      background: rgba(220, 76, 86, 0.12);
+      color: var(--red);
+      padding: 10px 14px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-danger:hover {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 148, 104, 0.13);
+      color: var(--green);
+    }
+    .pill.warn { background: rgba(200, 155, 66, 0.15); color: var(--gold); }
+    .pill.bad { background: rgba(220, 76, 86, 0.14); color: var(--red); }
+    .pill.info { background: rgba(37, 99, 235, 0.13); color: var(--blue); }
+
+    /* CUSTOMER WELCOME & BANNERS */
+    .cust-welcome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .cust-welcome h2 {
+      margin: 0 0 3px;
+      font-size: 20px;
+      letter-spacing: -0.4px;
+    }
+    .id-badge {
+      padding: 7px 12px;
+      border-radius: 11px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    .due-banner {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(200, 155, 66, 0.14));
+      border: 1px solid rgba(37, 99, 235, 0.28);
+      border-radius: 18px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .due-banner-info strong {
+      display: block;
+      font-size: 15px;
+      margin: 3px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 16px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-big {
+      font-size: 24px;
+      font-weight: 850;
+      letter-spacing: -0.7px;
+      margin: 8px 0 6px;
+      display: block;
+    }
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(130, 151, 174, 0.22);
+      overflow: hidden;
+      margin: 10px 0 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2563eb, #109468);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .qa-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 15px;
+      padding: 13px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: var(--shadow);
+      transition: transform 0.16s ease, border-color 0.16s ease;
+    }
+    .qa-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .qa-ico {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    /* TABLES */
+    .search-input {
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 12px;
+      outline: none;
+      min-width: 190px;
+    }
+    .search-input:focus { border-color: var(--blue); }
+
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+    }
+    th {
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      font-weight: 800;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+    }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    /* SIMULATOR & OPTION CARDS */
+    .chip-grid-nom {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+    .chip-grid-tenor {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 7px;
+      margin: 10px 0 14px;
+    }
+    .opt-card {
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 9px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .opt-card:hover { border-color: var(--blue); }
+    .opt-card.active {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 5px 14px rgba(37, 99, 235, 0.28);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+    }
+
+    .sim-result-box {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(16, 148, 104, 0.08));
+      border: 1px solid rgba(37, 99, 235, 0.22);
+      border-radius: 15px;
+      padding: 15px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .sim-result-box div span {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .sim-result-box div strong {
+      display: block;
+      font-size: 15px;
+      margin-top: 3px;
+      color: var(--blue);
+    }
+
+    .sav-option {
+      border: 1.5px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 15px;
+      padding: 16px;
+      text-align: left;
+      transition: all 0.18s ease;
+    }
+    .sav-option:hover { border-color: var(--blue); }
+    .sav-option.active {
+      border-color: var(--blue);
+      background: rgba(37, 99, 235, 0.09);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-pill-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--muted);
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+    .filter-pill-btn:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .filter-pill-btn.active {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+
+    /* CHAT UI */
+    .chat-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 310px;
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(130, 151, 174, 0.08);
+      border: 1px solid var(--line);
+      margin-bottom: 12px;
+    }
+    .msg-bubble {
+      max-width: 80%;
+      padding: 10px 13px;
+      border-radius: 14px;
+      font-size: 12.5px;
+    }
+    .msg-bubble.in {
+      align-self: flex-start;
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+    }
+    .msg-bubble.out {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+    }
+    .msg-bubble small {
+      display: block;
+      font-size: 10px;
+      opacity: 0.72;
+      margin-top: 4px;
+    }
+    .chat-form {
+      display: flex;
+      gap: 8px;
+    }
+    .chat-form input {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 10px 13px;
+      outline: none;
+    }
+
+    .due-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .due-item:last-child { border-bottom: 0; }
+    .due-date-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: rgba(220, 76, 86, 0.12);
+      color: var(--red);
+      font-weight: 800;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    /* NOTIFICATION BELL DRAWER ITEMS */
+    .notif-list {
+      display: grid;
+      gap: 9px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .notif-item {
+      padding: 12px 13px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .notif-item.unread {
+      border-color: rgba(37, 99, 235, 0.45);
+      background: rgba(37, 99, 235, 0.08);
+    }
+    .notif-ico {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      background: rgba(16, 148, 104, 0.14);
+      color: var(--green);
+    }
+    .notif-ico.pay {
+      background: rgba(37, 99, 235, 0.14);
+      color: var(--blue);
+    }
+    .notif-ico.warn {
+      background: rgba(200, 155, 66, 0.16);
+      color: var(--gold);
+    }
+    .notif-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .notif-title {
+      font-size: 12.5px;
+      font-weight: 750;
+      margin: 0 0 3px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .notif-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 5px;
+      line-height: 1.45;
+    }
+    .notif-time {
+      font-size: 10.5px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* === BOTTOM NAVIGATOR (MOBILE & GUEST STICKY) === */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--line);
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+      justify-content: space-around;
+      align-items: center;
+    }
+    .bottom-nav button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 8px;
+      border-radius: 10px;
+    }
+    .bottom-nav button .b-ico {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .bottom-nav button.active {
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    /* === GUEST LANDING VIEW (STICKY HEADER & STICKY FOOTER NAV) === */
+    .guest-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 68px;
+      z-index: 35;
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .guest-main {
+      padding: 88px 18px 98px;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+    .guest-hero {
+      padding: 28px 24px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(200, 155, 66, 0.12));
+      border: 1px solid var(--line);
+      margin-bottom: 20px;
+    }
+    .guest-hero h1 {
+      margin: 8px 0 10px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: -0.6px;
+    }
+    .guest-footer-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 35;
+      background: var(--panel);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--line);
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .guest-footer-nav button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 10px;
+    }
+    .guest-footer-nav button span { font-size: 18px; }
+    .guest-footer-nav button.active { color: var(--blue); font-weight: 800; }
+
+    /* === MODALS, SNACKBAR & SWIPE EDGE INDICATORS === */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(9, 17, 32, 0.65);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal-box {
+      width: 100%;
+      max-width: 470px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--panel-solid);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+    .modal-head h3 { margin: 0; font-size: 16px; }
+    .field {
+      display: grid;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .field label {
+      font-size: 11.5px;
+      font-weight: 650;
+      color: var(--muted);
+    }
+    .field input, .field select {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+    .field input:focus { border-color: var(--blue); }
+
+    /* PROFILE CROPPER CANVAS */
+    .crop-stage-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(130, 151, 174, 0.1);
+      border: 1px dashed var(--line);
+      margin-bottom: 12px;
+    }
+    #crop-canvas {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 3px solid var(--blue);
+      cursor: grab;
+      touch-action: none;
+      background: #cbd5e1;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    #crop-canvas:active { cursor: grabbing; }
+
+    .mode-switch-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+      padding: 6px;
+      border-radius: 13px;
+      background: rgba(130, 151, 174, 0.12);
+    }
+    .mode-switch-bar button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 6px;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .mode-switch-bar button.active {
+      background: var(--panel-solid);
+      color: var(--blue);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    /* SWIPE EDGE VISUAL PILL */
+    .swipe-edge-pill {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%) scale(0.7);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 10px 26px rgba(37, 99, 235, 0.42);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 90;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    .swipe-edge-pill.left { left: 10px; }
+    .swipe-edge-pill.right { right: 10px; }
+    .swipe-edge-pill.visible {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+
+    /* TOAST / SNACKBAR */
+    .toast {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #173b6c;
+      color: #fff;
+      padding: 11px 18px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 95;
+      transition: all 0.25s ease;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* === RESPONSIVE BREAKPOINTS === */
+    @media (max-width: 960px) {
+      .sidebar { width: 215px; }
+      .app-topbar { left: 215px; padding: 0 18px; }
+      .app-content { margin-left: 215px; width: calc(100% - 215px); padding: 88px 18px 28px; }
+    }
+
+    @media (max-width: 760px) {
+      .sidebar { display: none !important; }
+      .app-topbar {
+        left: 0;
+        height: 64px;
+        padding: 0 14px;
+      }
+      .mobile-brand-slot { display: inline-flex; }
+      .topbar-left-info { display: none; }
+      .profile-trigger {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+      }
+      .app-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 78px 14px 92px;
+      }
+      .bottom-nav.show-mobile {
+        display: flex;
+      }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chip-grid-nom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chip-grid-tenor { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .sim-result-box { grid-template-columns: 1fr; }
+      .search-input { width: 100%; min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SWIPE EDGE VISUAL INDICATORS -->
+  <div id="swipe-pill-left" class="swipe-edge-pill left">←</div>
+  <div id="swipe-pill-right" class="swipe-edge-pill right">→</div>
+
+  <!-- =====================================================================
+       VIEW 1: BERANDA AWAL TAMU (GUEST VIEW - STICKY HEADER & STICKY FOOTER)
+       ===================================================================== -->
+  <div id="view-guest" class="view-root active">
+    <header class="guest-header">
+      <div class="brand-3d" data-brand></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="icon-clean" onclick="toggleTheme()" title="Ganti Tema Terang / Gelap">◐</button>
+        <button class="btn-secondary" onclick="openAuthModal('login')">Masuk</button>
+        <button class="btn-primary" onclick="openAuthModal('register')">Daftar</button>
+      </div>
+    </header>
+
+    <main class="guest-main">
+      <section id="g-hero" class="guest-hero">
+        <span class="pill info">Platform Pinjaman & Tabungan Digital</span>
+        <h1>Solusi Pinjaman Cepat & Tabungan Terencana dalam Satu Aplikasi</h1>
+        <p class="muted" style="margin:0 0 18px;max-width:620px">
+          Kelola kebutuhan dana tunai dengan tenor fleksibel 1 hingga 12 bulan serta bangun kebiasaan menabung rutin bersama <b>OZdigiFinance</b>.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="scrollToGuest('g-simulasi')">Simulasi Pinjaman</button>
+          <button class="btn-secondary" onclick="openAuthModal('login')">Masuk Akun Nasabah</button>
+        </div>
+      </section>
+
+      <section id="g-pinjaman" class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h3>Pinjaman Digital</h3>
+            <span class="pill info">Tenor 1 – 12 Bulan</span>
+          </div>
+          <p class="muted text-sm">Limit mulai Rp 500.000 hingga Rp 20.000.000 dengan proses pengajuan cepat, transparan, dan cicilan bulanan terjangkau.</p>
+          <button class="btn-primary" onclick="scrollToGuest('g-simulasi')">Hitung Cicilan</button>
+        </div>
+
+        <div id="g-tabungan" class="card">
+          <div class="card-head">
+            <h3>Tabungan Digital</h3>
+            <span class="pill">Fleksibel</span>
+          </div>
+          <p class="muted text-sm" style="margin-bottom:12px">Pilih opsi menabung sesuai kenyamanan Anda:</p>
+          <div class="grid-3" style="gap:8px;margin-bottom:14px">
+            <div class="sav-option active" style="padding:11px">
+              <strong style="font-size:12.5px">Menabung Harian</strong>
+              <div class="muted text-xs" style="margin-top:3px">Setoran ringan setiap hari</div>
+            </div>
+            <div class="sav-option active" style="padding:11px">
+              <strong style="font-size:12.5px">Menabung Mingguan</strong>
+              <div class="muted text-xs" style="margin-top:3px">Setoran rutin per minggu</div>
+            </div>
+            <div class="sav-option active" style="padding:11px">
+              <strong style="font-size:12.5px">Menabung Bulanan</strong>
+              <div class="muted text-xs" style="margin-top:3px">Setoran terencana bulanan</div>
+            </div>
+          </div>
+          <button class="btn-secondary" onclick="openAuthModal('register')">Mulai Menabung</button>
+        </div>
+      </section>
+
+      <section id="g-simulasi" class="card">
+        <div class="card-head">
+          <h3>Kalkulator Simulasi Pinjaman</h3>
+          <span class="muted text-xs">Pilih nominal & tenor 1–12 bulan</span>
+        </div>
+        <div id="guest-loan-sim"></div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end">
+          <button class="btn-primary" onclick="openAuthModal('login')">Ajukan Sekarang →</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="guest-footer-nav" id="guest-footer-nav">
+      <button class="active" data-gsec="g-hero" onclick="scrollToGuest('g-hero', this)"><span>⌂</span>Beranda</button>
+      <button data-gsec="g-pinjaman" onclick="scrollToGuest('g-pinjaman', this)"><span>▤</span>Pinjaman</button>
+      <button data-gsec="g-tabungan" onclick="scrollToGuest('g-tabungan', this)"><span>◈</span>Tabungan</button>
+      <button data-gsec="g-simulasi" onclick="scrollToGuest('g-simulasi', this)"><span>🧮</span>Simulasi</button>
+      <button onclick="openAuthModal('login')"><span>👤</span>Masuk</button>
+    </nav>
+  </div>
+
+  <!-- =====================================================================
+       VIEW 2: BERANDA LOGIN NASABAH (BUDI SANTOSO, ID: OZF-00097)
+       ===================================================================== -->
+  <div id="view-customer" class="view-root">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-3d" data-brand></div>
+        <small>Solusi Finansial Digital Anda</small>
+      </div>
+      <div class="nav-group-label">MENU NASABAH</div>
+      <nav class="side-nav" id="cust-side-nav">
+        <button class="active" data-cpage="c-beranda"><span class="ico">▦</span>Beranda</button>
+        <button data-cpage="c-pinjaman"><span class="ico">▤</span>Pinjaman</button>
+        <button data-cpage="c-tabungan"><span class="ico">◈</span>Tabungan</button>
+        <button data-cpage="c-tagihan"><span class="ico">◷</span>Tagihan</button>
+        <button data-cpage="c-pesan"><span class="ico">✉</span>Pesan <span class="pill bad" style="margin-left:auto">1</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-secondary" style="width:100%;margin-bottom:8px" onclick="switchRole('admin')">🛡 Beralih ke Mode Admin</button>
+        <button class="btn-danger" style="width:100%" onclick="requestLogout()">↪ Logout Akun</button>
+      </div>
+    </aside>
+
+    <header class="app-topbar">
+      <div class="mobile-brand-slot">
+        <div class="brand-3d" data-brand></div>
+      </div>
+      <div class="topbar-left-info">
+        <span class="mode-chip" id="cust-page-label">Beranda Nasabah</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-clean" onclick="toggleTheme()" title="Ganti Tema Terang / Gelap">◐</button>
+        <button class="icon-clean" id="c-bell-btn" onclick="openCustomerNotifCenter()" title="Pemberitahuan Nasabah">
+          <svg class="bell-svg" id="c-bell-svg" viewBox="0 0 24 24">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge" id="c-bell-badge">1</span>
+        </button>
+        <button class="profile-trigger" data-avatar onclick="openProfileModal()" title="Edit Data Profil & Akun">BS</button>
+      </div>
+    </header>
+
+    <main class="app-content">
+      <!-- SUBPAGE: BERANDA NASABAH -->
+      <section id="c-beranda" class="subpage active">
+        <div class="cust-welcome">
+          <div>
+            <h2>Halo, <span id="cust-greeting-name">Budi Santoso</span> 👋</h2>
+            <p class="muted text-sm" style="margin:0">Kelola pinjaman aktif dan tabungan digital Anda dalam satu tempat.</p>
+          </div>
+          <div class="id-badge">ID Nasabah: OZF-00097</div>
+        </div>
+
+        <div class="due-banner">
+          <div class="due-banner-info">
+            <span class="pill warn">Tagihan Jatuh Tempo Terdekat</span>
+            <strong>Angsuran ke-5 · Rp 1.200.000</strong>
+            <span class="muted text-xs">Jatuh tempo: 30 Nov 2026 (4 hari lagi) · Kontrak #LN-2026-097</span>
+          </div>
+          <button class="btn-primary" onclick="navigateSubpage('c-tagihan')">Bayar Sekarang</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>Pinjaman Aktif Budi</h3>
+              <span class="pill info">Tenor 12 Bln</span>
+            </div>
+            <span class="muted text-xs">Sisa Pokok & Kewajiban</span>
+            <strong class="stat-big">Rp 9.600.000</strong>
+            <span class="muted text-xs">Dari total plafon pinjaman Rp 15.000.000</span>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:33.3%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px">
+              <span class="pill">4 / 12 Angsuran Lunas</span>
+              <span class="muted">Cicilan Rp 1.200.000/bln</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Tabungan Digital Budi</h3>
+              <span class="pill" id="cust-sav-badge">Menabung Mingguan</span>
+            </div>
+            <span class="muted text-xs">Saldo Tabungan Tersedia</span>
+            <strong class="stat-big" id="cust-sav-balance">Rp 3.450.000</strong>
+            <span class="muted text-xs">Setoran rutin terjadwal sesuai pilihan paket Anda</span>
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-primary" onclick="openDepositModal()">+ Setor Tabungan</button>
+              <button class="btn-secondary" onclick="navigateSubpage('c-tabungan')">Ubah Opsi</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="qa-btn" onclick="navigateSubpage('c-tagihan')">
+            <span class="qa-ico">💳</span>
+            <span>Bayar Angsuran</span>
+          </button>
+          <button class="qa-btn" onclick="openDepositModal()">
+            <span class="qa-ico">💰</span>
+            <span>Setor Tabungan</span>
+          </button>
+          <button class="qa-btn" onclick="navigateSubpage('c-pinjaman')">
+            <span class="qa-ico">🧮</span>
+            <span>Ajukan Pinjaman</span>
+          </button>
+          <button class="qa-btn" onclick="navigateSubpage('c-pesan')">
+            <span class="qa-ico">💬</span>
+            <span>Chat Admin</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Riwayat Transaksi Pribadi Budi</h3>
+            <input class="search-input" placeholder="Cari transaksi / ID..." oninput="filterTable('cust-tx-table', this.value)">
+          </div>
+          <div class="table-scroll">
+            <table id="cust-tx-table">
+              <thead>
+                <tr>
+                  <th>ID TRANSAKSI</th>
+                  <th>JENIS TRANSAKSI</th>
+                  <th>TANGGAL</th>
+                  <th>NOMINAL</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="cust-tx-body">
+                <tr>
+                  <td>TRX-20261125-018</td>
+                  <td>Pembayaran Angsuran ke-4</td>
+                  <td>25 Nov 2026</td>
+                  <td><b>Rp 1.200.000</b></td>
+                  <td><span class="pill">Terverifikasi</span></td>
+                </tr>
+                <tr>
+                  <td>SAV-20261120-044</td>
+                  <td>Setoran Tabungan Mingguan</td>
+                  <td>20 Nov 2026</td>
+                  <td><b>Rp 250.000</b></td>
+                  <td><span class="pill">Berhasil</span></td>
+                </tr>
+                <tr>
+                  <td>TRX-20261030-011</td>
+                  <td>Pembayaran Angsuran ke-3</td>
+                  <td>30 Okt 2026</td>
+                  <td><b>Rp 1.200.000</b></td>
+                  <td><span class="pill">Terverifikasi</span></td>
+                </tr>
+                <tr>
+                  <td>SAV-20261015-032</td>
+                  <td>Setoran Tabungan Mingguan</td>
+                  <td>15 Okt 2026</td>
+                  <td><b>Rp 500.000</b></td>
+                  <td><span class="pill">Berhasil</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBPAGE: PINJAMAN NASABAH -->
+      <section id="c-pinjaman" class="subpage">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <h3>Kontrak Pinjaman Aktif (#LN-2026-097)</h3>
+            <span class="pill info">Atas Nama Resmi: Budi Santoso</span>
+          </div>
+          <div class="grid-3">
+            <div>
+              <span class="muted text-xs">Plafon Pinjaman</span>
+              <strong style="display:block;font-size:16px">Rp 15.000.000</strong>
+            </div>
+            <div>
+              <span class="muted text-xs">Angsuran Terbayar</span>
+              <strong style="display:block;font-size:16px">4 dari 12 Bulan</strong>
+            </div>
+            <div>
+              <span class="muted text-xs">Sisa Kewajiban</span>
+              <strong style="display:block;font-size:16px;color:var(--blue)">Rp 9.600.000</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <h3>Simulasi Pengajuan Pinjaman Baru</h3>
+            <span class="muted text-xs">Pilih nominal & tenor 1–12 bulan</span>
+          </div>
+          <div id="cust-loan-sim"></div>
+          <div style="margin-top:14px;display:flex;justify-content:flex-end">
+            <button class="btn-primary" onclick="toast('Pengajuan simulasi pinjaman baru terkirim ke tim verifikasi OZdigiFinance!')">Ajukan Pinjaman Ini</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Jadwal Angsuran 1 – 12 Bulan</h3>
+            <span class="muted text-xs">Kontrak #LN-2026-097</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ANGSURAN</th>
+                  <th>JATUH TEMPO</th>
+                  <th>NOMINAL</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="cust-schedule-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBPAGE: TABUNGAN NASABAH -->
+      <section id="c-tabungan" class="subpage">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <h3>Saldo Tabungan Digital Anda</h3>
+            <button class="btn-primary" onclick="openDepositModal()">+ Setor Tabungan Sekarang</button>
+          </div>
+          <strong class="stat-big" id="cust-sav-balance-2">Rp 3.450.000</strong>
+          <p class="muted text-xs" style="margin:0">Pemilik rekening resmi: <b>Budi Santoso</b> (OZF-00097)</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Pilih Opsi Menabung Anda</h3>
+            <span class="muted text-xs">Klik kartu untuk memilih frekuensi menabung</span>
+          </div>
+          <div class="grid-3" id="cust-sav-options">
+            <button type="button" class="sav-option" data-sav-freq="Menabung Harian" onclick="selectSavingsFreq(this, 'Menabung Harian')">
+              <div style="font-size:22px;margin-bottom:6px">☀️</div>
+              <strong style="display:block;font-size:14px;margin-bottom:4px">Menabung Harian</strong>
+              <span class="muted text-xs">Setoran ringan setiap hari secara fleksibel.</span>
+            </button>
+            <button type="button" class="sav-option active" data-sav-freq="Menabung Mingguan" onclick="selectSavingsFreq(this, 'Menabung Mingguan')">
+              <div style="font-size:22px;margin-bottom:6px">📅</div>
+              <strong style="display:block;font-size:14px;margin-bottom:4px">Menabung Mingguan</strong>
+              <span class="muted text-xs">Setoran rutin setiap minggu lebih teratur.</span>
+            </button>
+            <button type="button" class="sav-option" data-sav-freq="Menabung Bulanan" onclick="selectSavingsFreq(this, 'Menabung Bulanan')">
+              <div style="font-size:22px;margin-bottom:6px">🗓️</div>
+              <strong style="display:block;font-size:14px;margin-bottom:4px">Menabung Bulanan</strong>
+              <span class="muted text-xs">Setoran terencana setiap bulan setelah gajian.</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUBPAGE: TAGIHAN NASABAH -->
+      <section id="c-tagihan" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Konfirmasi & Upload Bukti Pembayaran</h3>
+            <span class="pill warn">Angsuran ke-5: Rp 1.200.000</span>
+          </div>
+          <form onsubmit="submitPayProof(event)">
+            <div class="field">
+              <label>Nama Resmi Nasabah (Terkunci Sesuai Kontrak)</label>
+              <input value="Budi Santoso (OZF-00097)" readonly>
+            </div>
+            <div class="field">
+              <label>Pilih Tagihan</label>
+              <select id="bill-select">
+                <option value="Angsuran ke-5 (Rp 1.200.000)">Angsuran ke-5 · Rp 1.200.000 (Jatuh Tempo 30 Nov 2026)</option>
+                <option value="Angsuran ke-6 (Rp 1.200.000)">Angsuran ke-6 · Rp 1.200.000 (Jatuh Tempo 30 Des 2026)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Nominal Transfer (Rp)</label>
+              <input type="number" id="bill-amount" value="1200000" required>
+            </div>
+            <div class="field">
+              <label>Upload Bukti Transfer (JPG/PNG/PDF)</label>
+              <input type="file" accept="image/*,.pdf" required>
+            </div>
+            <button type="submit" class="btn-primary">Kirim Bukti Pembayaran</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- SUBPAGE: PESAN NASABAH -->
+      <section id="c-pesan" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Live Chat dengan Admin OZdigiFinance</h3>
+            <span class="pill">Online</span>
+          </div>
+          <div class="chat-box" id="cust-chat-box">
+            <div class="msg-bubble in">
+              Halo Pak Budi Santoso, pengingat untuk Angsuran ke-5 jatuh tempo pada 30 Nov 2026 sebesar Rp 1.200.000.
+              <small>Admin OZdigiFinance · 09:15</small>
+            </div>
+            <div class="msg-bubble out">
+              Baik admin, saya cek dulu ya. Rencana besok saya transfer.
+              <small>Budi Santoso · 09:22</small>
+            </div>
+          </div>
+          <form class="chat-form" onsubmit="sendCustChat(event)">
+            <input id="cust-chat-input" placeholder="Tulis pesan ke Admin..." required>
+            <button type="submit" class="btn-primary">Kirim</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATOR FOR NASABAH -->
+    <nav class="bottom-nav" id="cust-bottom-nav">
+      <button class="active" data-cpage="c-beranda"><span class="b-ico">▦</span>Beranda</button>
+      <button data-cpage="c-pinjaman"><span class="b-ico">▤</span>Pinjaman</button>
+      <button data-cpage="c-tabungan"><span class="b-ico">◈</span>Tabungan</button>
+      <button data-cpage="c-tagihan"><span class="b-ico">◷</span>Tagihan</button>
+      <button data-cpage="c-pesan"><span class="b-ico">✉</span>Pesan</button>
+    </nav>
+  </div>
+
+  <!-- =====================================================================
+       VIEW 3: DASHBOARD ADMIN (7 MENU OPERASIONAL)
+       ===================================================================== -->
+  <div id="view-admin" class="view-root">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-3d" data-brand></div>
+        <small>Panel Operasional Internal</small>
+      </div>
+      <div class="nav-group-label">MENU ADMIN</div>
+      <nav class="side-nav" id="admin-side-nav">
+        <button class="active" data-apage="a-dashboard"><span class="ico">▦</span>Dashboard</button>
+        <button data-apage="a-nasabah"><span class="ico">♙</span>Data Nasabah</button>
+        <button data-apage="a-pinjaman"><span class="ico">▤</span>Pinjaman</button>
+        <button data-apage="a-tabungan"><span class="ico">◈</span>Tabungan</button>
+        <button data-apage="a-tagihan"><span class="ico">◷</span>Tagihan & Pembayaran</button>
+        <button data-apage="a-pesan"><span class="ico">✉</span>Pesan <span class="pill bad" style="margin-left:auto">3</span></button>
+        <button data-apage="a-laporan"><span class="ico">▥</span>Laporan</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-secondary" style="width:100%;margin-bottom:8px" onclick="switchRole('customer')">👤 Mode Nasabah (Budi)</button>
+        <button class="btn-danger" style="width:100%" onclick="requestLogout()">↪ Logout Akun</button>
+      </div>
+    </aside>
+
+    <header class="app-topbar">
+      <div class="mobile-brand-slot">
+        <div class="brand-3d" data-brand></div>
+      </div>
+      <div class="topbar-left-info">
+        <span class="mode-chip" id="admin-page-label">Dashboard Operasional</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-clean" onclick="toggleTheme()" title="Ganti Tema">◐</button>
+        <button class="icon-clean" onclick="toast('2 pembayaran baru menunggu verifikasi admin.')" title="Pemberitahuan">
+          <svg class="bell-svg" viewBox="0 0 24 24">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span class="bell-badge">2</span>
+        </button>
+        <button class="profile-trigger" data-avatar onclick="openProfileModal()" title="Edit Data Profil & Akun">BS</button>
+      </div>
+    </header>
+
+    <main class="app-content">
+      <!-- ADMIN: DASHBOARD -->
+      <section id="a-dashboard" class="subpage active">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <h3>Tagihan Mendatang</h3>
+            <span class="muted text-xs">Jadwal terdekat</span>
+          </div>
+          <div class="due-item">
+            <div class="due-date-badge">27</div>
+            <div style="flex:1"><b>Andi Saputra</b><div class="muted text-xs">OZF-00124 · Jatuh tempo besok</div></div>
+            <b>Rp 750.000</b>
+          </div>
+          <div class="due-item">
+            <div class="due-date-badge">28</div>
+            <div style="flex:1"><b>Siti Aminah</b><div class="muted text-xs">OZF-00118 · Jatuh tempo 2 hari</div></div>
+            <b>Rp 500.000</b>
+          </div>
+          <div class="due-item">
+            <div class="due-date-badge">30</div>
+            <div style="flex:1"><b>Budi Santoso</b><div class="muted text-xs">OZF-00097 · Angsuran ke-5</div></div>
+            <b>Rp 1.200.000</b>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Transaksi Terbaru</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input class="search-input" placeholder="Cari nasabah..." oninput="filterTable('admin-tx-table', this.value)">
+              <button class="btn-primary" onclick="openAdminPayModal()">+ Catat Pembayaran</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table id="admin-tx-table">
+              <thead>
+                <tr>
+                  <th>NASABAH (DATA RESMI)</th>
+                  <th>ID TRANSAKSI</th>
+                  <th>TANGGAL</th>
+                  <th>NOMINAL</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="admin-tx-body">
+                <tr>
+                  <td><b>Andi Saputra</b> <span class="muted text-xs">(OZF-00124)</span></td>
+                  <td>TRX-20261126-001</td>
+                  <td>26 Nov 2026</td>
+                  <td><b>Rp 750.000</b></td>
+                  <td><span class="pill">Terverifikasi</span></td>
+                </tr>
+                <tr>
+                  <td><b>Siti Aminah</b> <span class="muted text-xs">(OZF-00118)</span></td>
+                  <td>TRX-20261126-002</td>
+                  <td>26 Nov 2026</td>
+                  <td><b>Rp 500.000</b></td>
+                  <td><span class="pill warn">Menunggu</span></td>
+                </tr>
+                <tr>
+                  <td><b>Budi Santoso</b> <span class="muted text-xs">(OZF-00097)</span></td>
+                  <td>TRX-20261125-018</td>
+                  <td>25 Nov 2026</td>
+                  <td><b>Rp 1.200.000</b></td>
+                  <td><span class="pill">Terverifikasi</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: DATA NASABAH -->
+      <section id="a-nasabah" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Database Resmi Nasabah</h3>
+            <span class="pill info">Nama resmi terkunci dari perubahan nama tampilan nasabah</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>NAMA RESMI</th>
+                  <th>ID NASABAH</th>
+                  <th>PINJAMAN AKTIF</th>
+                  <th>SALDO TABUNGAN</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>Budi Santoso</b></td>
+                  <td>OZF-00097</td>
+                  <td>Rp 15.000.000</td>
+                  <td>Rp 3.450.000</td>
+                  <td><span class="pill">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><b>Andi Saputra</b></td>
+                  <td>OZF-00124</td>
+                  <td>Rp 12.000.000</td>
+                  <td>Rp 2.100.000</td>
+                  <td><span class="pill">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><b>Siti Aminah</b></td>
+                  <td>OZF-00118</td>
+                  <td>Rp 8.000.000</td>
+                  <td>Rp 4.800.000</td>
+                  <td><span class="pill">Aktif</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: PINJAMAN -->
+      <section id="a-pinjaman" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Daftar Kontrak Pinjaman Aktif</h3>
+            <span class="muted text-xs">Aturan bunga & biaya pencairan otomatis sesuai tenor</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>NASABAH</th>
+                  <th>PLAFON</th>
+                  <th>TENOR</th>
+                  <th>SISA PIUTANG</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><b>Budi Santoso</b> (OZF-00097)</td><td>Rp 15.000.000</td><td>12 Bulan</td><td>Rp 9.600.000</td><td><span class="pill">Berjalan</span></td></tr>
+                <tr><td><b>Andi Saputra</b> (OZF-00124)</td><td>Rp 12.000.000</td><td>12 Bulan</td><td>Rp 7.500.000</td><td><span class="pill">Berjalan</span></td></tr>
+                <tr><td><b>Siti Aminah</b> (OZF-00118)</td><td>Rp 8.000.000</td><td>10 Bulan</td><td>Rp 4.500.000</td><td><span class="pill">Berjalan</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: TABUNGAN -->
+      <section id="a-tabungan" class="subpage">
+        <div class="grid-3" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-head" style="margin-bottom:6px">
+              <span class="muted text-xs">Total Dana Tabungan Kelolaan</span>
+              <span class="pill">5 Rekening</span>
+            </div>
+            <strong class="stat-big" id="admin-sav-total-kpi" style="font-size:21px;margin:4px 0">Rp 48.750.000</strong>
+            <span class="muted text-xs">Akumulasi seluruh saldo aktif nasabah</span>
+          </div>
+          <div class="card">
+            <div class="card-head" style="margin-bottom:6px">
+              <span class="muted text-xs">Nasabah Tabungan Aktif</span>
+              <span class="pill info">Harian · Mingguan · Bulanan</span>
+            </div>
+            <strong class="stat-big" style="font-size:21px;margin:4px 0">5 Nasabah Aktif</strong>
+            <span class="muted text-xs">1 Harian · 2 Mingguan · 2 Bulanan</span>
+          </div>
+          <div class="card">
+            <div class="card-head" style="margin-bottom:6px">
+              <span class="muted text-xs">Setoran Masuk Bulan Ini</span>
+              <span class="pill">Nov 2026</span>
+            </div>
+            <strong class="stat-big" id="admin-sav-month-kpi" style="font-size:21px;margin:4px 0;color:var(--green)">Rp 6.850.000</strong>
+            <span class="muted text-xs">Terverifikasi oleh sistem OZdigiFinance</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head">
+            <div>
+              <h3>Rekening Tabungan Nasabah (Data Resmi)</h3>
+              <span class="muted text-xs">Menampilkan nama resmi nasabah sesuai registrasi kontrak</span>
+            </div>
+            <button class="btn-primary" onclick="openAdminSavingsModal('OZF-00097', 'setor')">+ Catat Transaksi Tabungan</button>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="filter-pills" id="admin-sav-filters">
+              <button type="button" class="filter-pill-btn active" data-prog="all" onclick="setAdminSavFilter('all', this)">Semua</button>
+              <button type="button" class="filter-pill-btn" data-prog="Menabung Harian" onclick="setAdminSavFilter('Menabung Harian', this)">Menabung Harian</button>
+              <button type="button" class="filter-pill-btn" data-prog="Menabung Mingguan" onclick="setAdminSavFilter('Menabung Mingguan', this)">Menabung Mingguan</button>
+              <button type="button" class="filter-pill-btn" data-prog="Menabung Bulanan" onclick="setAdminSavFilter('Menabung Bulanan', this)">Menabung Bulanan</button>
+            </div>
+            <input class="search-input" id="admin-sav-search" placeholder="Cari nama resmi / ID nasabah..." oninput="renderAdminSavingsTable()">
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID NASABAH</th>
+                  <th>NAMA RESMI NASABAH</th>
+                  <th>PILIHAN PROGRAM</th>
+                  <th>SETORAN RUTIN</th>
+                  <th>TOTAL SALDO TABUNGAN</th>
+                  <th>TERAKHIR SETOR</th>
+                  <th>STATUS</th>
+                  <th>AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="admin-sav-accounts-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Log Mutasi Tabungan Terbaru</h3>
+            <span class="muted text-xs">Riwayat setoran & penarikan terverifikasi</span>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>TANGGAL</th>
+                  <th>NAMA RESMI NASABAH</th>
+                  <th>JENIS MUTASI</th>
+                  <th>PROGRAM</th>
+                  <th>NOMINAL</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="admin-sav-mutations-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: TAGIHAN -->
+      <section id="a-tagihan" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Verifikasi Tagihan & Pembayaran</h3>
+            <button class="btn-primary" onclick="openAdminPayModal()">+ Catat Pembayaran</button>
+          </div>
+          <div id="admin-pending-bills">
+            <div class="due-item">
+              <div class="due-date-badge">26</div>
+              <div style="flex:1"><b>Budi Santoso (OZF-00097)</b><div class="muted text-xs">Angsuran ke-5 · Rp 1.200.000 · Menunggu verifikasi</div></div>
+              <button class="btn-primary" onclick="verifyBillItem(this, 'OZF-00097', 'Budi Santoso', 'Angsuran ke-5', 1200000)">Verifikasi</button>
+            </div>
+            <div class="due-item">
+              <div class="due-date-badge">26</div>
+              <div style="flex:1"><b>Siti Aminah (OZF-00118)</b><div class="muted text-xs">Angsuran ke-4 · Rp 500.000 · Menunggu verifikasi</div></div>
+              <button class="btn-primary" onclick="verifyBillItem(this, 'OZF-00118', 'Siti Aminah', 'Angsuran ke-4', 500000)">Verifikasi</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: PESAN -->
+      <section id="a-pesan" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Pesan Masuk Nasabah</h3>
+            <span class="pill warn">3 Percakapan</span>
+          </div>
+          <div class="due-item">
+            <div class="due-date-badge" style="background:rgba(37,99,235,.12);color:var(--blue)">BS</div>
+            <div style="flex:1"><b>Budi Santoso (OZF-00097)</b><div class="muted text-xs">Baik admin, saya cek dulu ya. Rencana besok saya transfer.</div></div>
+            <button class="btn-secondary" onclick="switchRole('customer');navigateSubpage('c-pesan')">Buka Chat</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ADMIN: LAPORAN -->
+      <section id="a-laporan" class="subpage">
+        <div class="card">
+          <div class="card-head">
+            <h3>Ekspor Laporan Keuangan (CSV)</h3>
+            <button class="btn-primary" onclick="downloadCsvReport()">⬇ Unduh Laporan CSV</button>
+          </div>
+          <p class="muted text-sm" style="margin:0">Unduh rekap data transaksi resmi nasabah dalam format CSV untuk pembukuan.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATOR FOR ADMIN -->
+    <nav class="bottom-nav" id="admin-bottom-nav">
+      <button class="active" data-apage="a-dashboard"><span class="b-ico">▦</span>Beranda</button>
+      <button data-apage="a-nasabah"><span class="b-ico">♙</span>Nasabah</button>
+      <button data-apage="a-pinjaman"><span class="b-ico">▤</span>Pinjaman</button>
+      <button data-apage="a-tabungan"><span class="b-ico">◈</span>Tabungan</button>
+      <button data-apage="a-laporan"><span class="b-ico">▥</span>Laporan</button>
+    </nav>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: PUSAT NOTIFIKASI LONCENG NASABAH (REAL-TIME + AUDIO CHIME)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-cust-notifs">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Pemberitahuan Nasabah</h3>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button type="button" class="btn-secondary" style="padding:6px 10px;font-size:11px" onclick="playNotifChime();toast('Nada notifikasi diputar.')">🔔 Tes Nada</button>
+          <button type="button" class="btn-secondary" style="padding:6px 10px;font-size:11px" onclick="markAllNotifsRead()">Tandai Dibaca</button>
+          <button type="button" class="icon-clean" onclick="closeModal('modal-cust-notifs')">✕</button>
+        </div>
+      </div>
+      <div class="notif-list" id="cust-notif-list"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: EDIT DATA PROFIL & AKUN (CROP, ZOOM, ROTATE 360°, SWITCHER, LOGOUT)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-profile">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Edit Data Profil & Pengaturan</h3>
+        <button class="icon-clean" onclick="closeModal('modal-profile')">✕</button>
+      </div>
+
+      <!-- PENGALIH PERAN CEPAT -->
+      <div class="mode-switch-bar">
+        <button id="sw-customer" class="active" onclick="switchRole('customer');closeModal('modal-profile')">👤 Nasabah Budi</button>
+        <button id="sw-admin" onclick="switchRole('admin');closeModal('modal-profile')">🛡 Mode Admin</button>
+        <button id="sw-guest" onclick="previewGuestView();closeModal('modal-profile')">⌂ Lihat Tamu</button>
+      </div>
+
+      <!-- EDITOR FOTO PROFIL: DRAG CROP, ZOOM 50%-300%, ROTATE 0°-360° -->
+      <div class="crop-stage-wrap">
+        <canvas id="crop-canvas" width="240" height="240" title="Geser foto untuk mengatur posisi crop"></canvas>
+        <span class="muted text-xs">Geser foto dalam lingkaran · Zoom & Putar 360°</span>
+        <input type="file" id="avatar-file-input" accept="image/*" style="font-size:11px;max-width:230px">
+      </div>
+
+      <div class="field">
+        <label>Zoom Foto (<span id="zoom-val">100</span>%)</label>
+        <input type="range" id="crop-zoom" min="50" max="300" value="100" oninput="updateCropControls()">
+      </div>
+
+      <div class="field">
+        <label>Putar Foto (<span id="rot-val">0</span>°)</label>
+        <input type="range" id="crop-rot" min="0" max="360" value="0" oninput="updateCropControls()">
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button type="button" class="btn-secondary" style="flex:1;padding:6px" onclick="stepRotate(-90)">↺ -90°</button>
+          <button type="button" class="btn-secondary" style="flex:1;padding:6px" onclick="stepRotate(90)">↻ +90°</button>
+          <button type="button" class="btn-secondary" style="flex:1;padding:6px" onclick="resetCrop()">Reset</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nama Tampilan Akun (Tidak mengubah nama resmi Budi Santoso di data Admin)</label>
+        <input id="edit-display-name" value="Budi Santoso">
+      </div>
+
+      <div class="field">
+        <label>Password Baru (Opsional, minimal 6 karakter)</label>
+        <div style="display:flex;gap:6px">
+          <input type="password" id="edit-pass" placeholder="Kosongkan jika tidak ganti">
+          <button type="button" class="btn-secondary" onclick="togglePassVis()">👁</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button type="button" class="btn-danger" onclick="requestLogout()">↪ Logout</button>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-profile')">Batal</button>
+          <button type="button" class="btn-primary" onclick="saveProfileChanges()">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: AUTH (MASUK / DAFTAR DARI BERANDA TAMU)
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-auth">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="auth-modal-title">Masuk ke OZdigiFinance</h3>
+        <button class="icon-clean" onclick="closeModal('modal-auth')">✕</button>
+      </div>
+      <p class="muted text-xs" style="margin-top:0">Login permanen akan aktif hingga Anda menekan tombol Logout:</p>
+
+      <div style="display:grid;gap:8px;margin-bottom:14px">
+        <button type="button" class="btn-primary" style="width:100%;padding:12px" onclick="loginWithSession('customer', 'OZF-00097', 'Budi Santoso')">
+          👤 Masuk sebagai Nasabah: Budi Santoso (OZF-00097)
+        </button>
+        <button type="button" class="btn-secondary" style="width:100%;padding:11px" onclick="loginWithSession('admin', 'ADM-001', 'Andi Saputra')">
+          🛡 Masuk Pratinjau Admin (Andi Saputra)
+        </button>
+      </div>
+
+      <form onsubmit="handleAuthSubmit(event)">
+        <div class="field">
+          <label>ID Nasabah / Email / No. HP</label>
+          <input id="auth-id-input" value="OZF-00097" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" value="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%">Lanjutkan Masuk</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: KONFIRMASI LOGOUT MANUAL
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-logout-confirm">
+    <div class="modal-box" style="max-width:390px">
+      <div class="modal-head">
+        <h3>Konfirmasi Keluar Akun</h3>
+        <button class="icon-clean" onclick="closeModal('modal-logout-confirm')">✕</button>
+      </div>
+      <p style="margin:4px 0 18px;font-size:13.5px">Apakah Anda yakin ingin keluar dari akun?</p>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button type="button" class="btn-secondary" onclick="closeModal('modal-logout-confirm')">Batal</button>
+        <button type="button" class="btn-danger" onclick="executeLogout()">Ya, Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: SETOR TABUNGAN NASABAH
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-deposit">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Setor Tabungan Digital</h3>
+        <button class="icon-clean" onclick="closeModal('modal-deposit')">✕</button>
+      </div>
+      <form onsubmit="submitDeposit(event)">
+        <div class="field">
+          <label>Nominal Setoran (Rp)</label>
+          <input type="number" id="deposit-amount" value="250000" min="10000" step="5000" required>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('deposit-amount').value=100000">Rp 100 rb</button>
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('deposit-amount').value=250000">Rp 250 rb</button>
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('deposit-amount').value=500000">Rp 500 rb</button>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-deposit')">Batal</button>
+          <button type="submit" class="btn-primary">Konfirmasi Setoran</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: ADMIN CATAT PEMBAYARAN
+       ===================================================================== -->
+  <div class="modal-backdrop" id="modal-admin-pay">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Catat & Verifikasi Pembayaran Nasabah</h3>
+        <button class="icon-clean" onclick="closeModal('modal-admin-pay')">✕</button>
+      </div>
+      <form onsubmit="submitAdminPay(event)">
+        <div class="field">
+          <label>Pilih Nasabah Resmi</label>
+          <select id="admin-pay-cust">
+            <option value="OZF-00097|Budi Santoso">Budi Santoso (OZF-00097)</option>
+            <option value="OZF-00124|Andi Saputra">Andi Saputra (OZF-00124)</option>
+            <option value="OZF-00118|Siti Aminah">Siti Aminah (OZF-00118)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Keterangan Angsuran</label>
+          <input id="admin-pay-desc" value="Angsuran ke-5" required>
+        </div>
+        <div class="field">
+          <label>Nominal Pembayaran (Rp)</label>
+          <input type="number" id="admin-pay-nom" value="1200000" required>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button type="button" class="btn-secondary" onclick="closeModal('modal-admin-pay')">Batal</button>
+          <button type="submit" class="btn-primary">Simpan & Verifikasi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: ADMIN TRANSAKSI TABUNGAN NASABAH
+       ===================================================================== -->
+  <div class="modal-backdrop" id="admin-savings-modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Catat & Verifikasi Tabungan Nasabah</h3>
+        <button class="icon-clean" onclick="closeModal('admin-savings-modal')">✕</button>
+      </div>
+      <form onsubmit="submitAdminSavingsTx(event)">
+        <div class="field">
+          <label>Pilih Rekening Nasabah (Nama Resmi)</label>
+          <select id="admin-sav-cust-select"></select>
+        </div>
+        <div class="field">
+          <label>Jenis Transaksi</label>
+          <select id="admin-sav-type">
+            <option value="setor">Setoran Tabungan (+)</option>
+            <option value="tarik">Penarikan Saldo (-)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nominal Transaksi (Rp)</label>
+          <input type="number" id="admin-sav-amount" value="250000" min="10000" step="5000" required>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('admin-sav-amount').value=50000">Rp 50 rb</button>
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('admin-sav-amount').value=250000">Rp 250 rb</button>
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('admin-sav-amount').value=500000">Rp 500 rb</button>
+          <button type="button" class="btn-secondary" style="flex:1" onclick="document.getElementById('admin-sav-amount').value=1000000">Rp 1 jt</button>
+        </div>
+        <div class="field">
+          <label>Catatan Admin (Opsional)</label>
+          <input type="text" id="admin-sav-note" placeholder="Contoh: Setoran rutin mingguan via transfer">
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+          <button type="button" class="btn-secondary" onclick="closeModal('admin-savings-modal')">Batal</button>
+          <button type="submit" class="btn-primary">Simpan & Verifikasi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /* =====================================================================
+       1. BRAND 3D LETTER-BY-LETTER RENDERER
+       ===================================================================== */
+    function renderBrands() {
+      const bluePart = 'OZdigi';
+      const silverPart = 'Finance';
+      document.querySelectorAll('[data-brand]').forEach(el => {
+        let html = '';
+        let idx = 0;
+        for (const ch of bluePart) {
+          html += `<span class="ch b-blue" style="--i:${idx++}">${ch}</span>`;
+        }
+        for (const ch of silverPart) {
+          html += `<span class="ch b-silver" style="--i:${idx++}">${ch}</span>`;
+        }
+        el.innerHTML = html;
+      });
+    }
+
+    /* =====================================================================
+       2. THEME, TOAST & WEB AUDIO NOTIFICATION CHIME
+       ===================================================================== */
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      document.getElementById('theme-meta').setAttribute('content', next === 'dark' ? '#0f172a' : '#edf3f8');
+      try { localStorage.setItem('oz_theme', next); } catch (_) {}
+    }
+
+    let toastTimer;
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    // Harmonic 3-note chime (C5 -> E5 -> G5) using Web Audio API
+    let sharedAudioCtx = null;
+    function playNotifChime() {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!sharedAudioCtx) sharedAudioCtx = new AudioContextClass();
+        if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+
+        const now = sharedAudioCtx.currentTime;
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+        notes.forEach((freq, idx) => {
+          const osc = sharedAudioCtx.createOscillator();
+          const gain = sharedAudioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+
+          gain.gain.setValueAtTime(0.0001, now + idx * 0.11);
+          gain.gain.exponentialRampToValueAtTime(0.22, now + idx * 0.11 + 0.025);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.11 + 0.42);
+
+          osc.connect(gain);
+          gain.connect(sharedAudioCtx.destination);
+          osc.start(now + idx * 0.11);
+          osc.stop(now + idx * 0.11 + 0.45);
+        });
+
+        const bellSvg = document.getElementById('c-bell-svg');
+        if (bellSvg) {
+          bellSvg.classList.remove('ring-urgent');
+          void bellSvg.offsetWidth;
+          bellSvg.classList.add('ring-urgent');
+        }
+      } catch (_) {}
+    }
+
+    // Unlock audio context smoothly on first user interaction
+    document.addEventListener('pointerdown', () => {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass && !sharedAudioCtx) {
+          sharedAudioCtx = new AudioContextClass();
+        }
+        if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+          sharedAudioCtx.resume();
+        }
+      } catch (_) {}
+    }, { once: true });
+
+    /* =====================================================================
+       3. CUSTOMER NOTIFICATION CENTER (PERSISTENT + CROSS-TAB SYNC)
+       ===================================================================== */
+    const NOTIF_STORAGE_KEY = 'ozf_customer_notifs_v1';
+
+    const defaultNotifs = [
+      {
+        id: 'NTF-001',
+        custId: 'OZF-00097',
+        category: 'warn',
+        title: 'Pengingat Jatuh Tempo Angsuran ke-5',
+        desc: 'Tagihan sebesar Rp 1.200.000 jatuh tempo pada 30 Nov 2026.',
+        time: '26 Nov 2026 · 08:30',
+        unread: true
+      }
+    ];
+
+    function loadCustomerNotifs() {
+      try {
+        const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (_) {}
+      return [...defaultNotifs];
+    }
+
+    function saveCustomerNotifs(list) {
+      try {
+        localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(list));
+      } catch (_) {}
+      renderCustomerNotifs();
+    }
+
+    function pushCustomerNotification({ custId = 'OZF-00097', category = 'sav', title, desc, playSound = true }) {
+      const list = loadCustomerNotifs();
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      list.unshift({
+        id: 'NTF-' + Date.now(),
+        custId,
+        category,
+        title,
+        desc,
+        time: `26 Nov 2026 · ${nowStr}`,
+        unread: true
+      });
+      saveCustomerNotifs(list);
+      if (playSound) playNotifChime();
+    }
+
+    function renderCustomerNotifs() {
+      const list = loadCustomerNotifs();
+      const unreadCount = list.filter(n => n.unread).length;
+      const badge = document.getElementById('c-bell-badge');
+      if (badge) {
+        badge.textContent = unreadCount;
+        badge.classList.toggle('hidden', unreadCount === 0);
+      }
+
+      const container = document.getElementById('cust-notif-list');
+      if (!container) return;
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="muted text-sm" style="text-align:center;padding:24px">Belum ada pemberitahuan baru.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(n => {
+        let iconChar = '💰';
+        let iconClass = 'notif-ico';
+        if (n.category === 'pay') { iconChar = '✅'; iconClass = 'notif-ico pay'; }
+        else if (n.category === 'warn') { iconChar = '⏰'; iconClass = 'notif-ico warn'; }
+
+        return `
+          <div class="notif-item ${n.unread ? 'unread' : ''}" onclick="markSingleNotifRead('${n.id}')">
+            <div class="${iconClass}">${iconChar}</div>
+            <div class="notif-body">
+              <div class="notif-title">
+                <span>${n.title}</span>
+                ${n.unread ? '<span class="pill info" style="font-size:9.5px;padding:2px 7px">Baru</span>' : ''}
+              </div>
+              <p class="notif-desc">${n.desc}</p>
+              <span class="notif-time">${n.time}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openCustomerNotifCenter() {
+      renderCustomerNotifs();
+      openModal('modal-cust-notifs');
+    }
+
+    function markSingleNotifRead(id) {
+      const list = loadCustomerNotifs();
+      const item = list.find(n => n.id === id);
+      if (item && item.unread) {
+        item.unread = false;
+        saveCustomerNotifs(list);
+      }
+    }
+
+    function markAllNotifsRead() {
+      const list = loadCustomerNotifs().map(n => ({ ...n, unread: false }));
+      saveCustomerNotifs(list);
+      toast('Semua pemberitahuan ditandai sudah dibaca.');
+    }
+
+    // Real-time cross-tab synchronization when Admin verifies in another tab
+    window.addEventListener('storage', (e) => {
+      if (e.key === NOTIF_STORAGE_KEY && e.newValue) {
+        renderCustomerNotifs();
+        playNotifChime();
+        toast('🔔 Pemberitahuan baru diterima dari Admin OZdigiFinance!');
+      }
+    });
+
+    /* =====================================================================
+       4. MODAL MANAGEMENT & HISTORY SYNC
+       ===================================================================== */
+    const modalIds = [
+      'modal-cust-notifs',
+      'modal-profile',
+      'modal-auth',
+      'modal-logout-confirm',
+      'modal-deposit',
+      'modal-admin-pay',
+      'admin-savings-modal'
+    ];
+
+    function getTopOpenModal() {
+      for (let i = modalIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(modalIds[i]);
+        if (el && el.classList.contains('show')) return modalIds[i];
+      }
+      return null;
+    }
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('show');
+      pushNavHistory({ type: 'modal', id });
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
+    }
+
+    /* =====================================================================
+       5. PERSISTENT LOGIN SESSION & AUTHENTICATION GUARD
+       ===================================================================== */
+    const SESSION_KEY = 'ozdigifinance_auth_session_v1';
+    const COOKIE_NAME = 'ozf_session_token';
+
+    function computeSessionSignature(payload) {
+      const raw = `${payload.tokenId}|${payload.userId}|${payload.role}|${payload.issuedAt}|OZF_GUARD_2026`;
+      let hash = 2166136261;
+      for (let i = 0; i < raw.length; i++) {
+        hash ^= raw.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(16).padStart(8, '0');
+    }
+
+    function createSessionToken(role, userId, officialName) {
+      const now = Date.now();
+      const rand = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      const session = {
+        tokenId: 'tok_' + rand,
+        userId: userId,
+        officialName: officialName,
+        role: role === 'admin' ? 'admin' : 'customer',
+        issuedAt: now,
+        expiresAt: now + (365 * 24 * 60 * 60 * 1000)
+      };
+      session.signature = computeSessionSignature(session);
+      return session;
+    }
+
+    function persistSession(session) {
+      const serialized = JSON.stringify(session);
+      try {
+        localStorage.setItem(SESSION_KEY, serialized);
+      } catch (_) {}
+      const secureFlag = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${COOKIE_NAME}=${encodeURIComponent(session.tokenId + '.' + session.signature)}; path=/; max-age=31536000; SameSite=Lax${secureFlag}`;
+    }
+
+    function clearPersistedSession() {
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch (_) {}
+      document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+    }
+
+    function getValidSession() {
+      let raw = null;
+      try {
+        raw = localStorage.getItem(SESSION_KEY);
+      } catch (_) {}
+      if (!raw) return null;
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (!parsed.tokenId || !parsed.userId || !parsed.role || !parsed.signature) return null;
+        if (typeof parsed.expiresAt !== 'number' || Date.now() > parsed.expiresAt) {
+          clearPersistedSession();
+          return null;
+        }
+        const expectedSig = computeSessionSignature(parsed);
+        if (parsed.signature !== expectedSig) {
+          clearPersistedSession();
+          return null;
+        }
+        return parsed;
+      } catch (_) {
+        clearPersistedSession();
+        return null;
+      }
+    }
+
+    /* =====================================================================
+       6. NAVIGATION HISTORY, VIEW CONTROLLER & AUTH GUARD
+       ===================================================================== */
+    let currentView = 'guest';
+    let currentCustPage = 'c-beranda';
+    let currentAdminPage = 'a-dashboard';
+    let navHistoryStack = [];
+    let isPopHandling = false;
+
+    function pushNavHistory(entry) {
+      if (isPopHandling) return;
+      const last = navHistoryStack[navHistoryStack.length - 1];
+      if (last && JSON.stringify(last) === JSON.stringify(entry)) return;
+      navHistoryStack.push(entry);
+      try {
+        history.pushState({ ozNavDepth: navHistoryStack.length, entry }, '', '');
+      } catch (_) {}
+    }
+
+    function applyViewDOM(viewName) {
+      if (viewName === 'customer' || viewName === 'admin') {
+        const session = getValidSession();
+        if (!session) {
+          viewName = 'guest';
+        }
+      }
+
+      currentView = viewName;
+      document.querySelectorAll('.view-root').forEach(v => v.classList.remove('active'));
+      const targetRoot = document.getElementById('view-' + viewName);
+      if (targetRoot) targetRoot.classList.add('active');
+
+      document.getElementById('cust-bottom-nav').classList.toggle('show-mobile', viewName === 'customer');
+      document.getElementById('admin-bottom-nav').classList.toggle('show-mobile', viewName === 'admin');
+
+      document.getElementById('sw-customer').classList.toggle('active', viewName === 'customer');
+      document.getElementById('sw-admin').classList.toggle('active', viewName === 'admin');
+      document.getElementById('sw-guest').classList.toggle('active', viewName === 'guest');
+    }
+
+    function activateCustomerSubpage(pageId, recordHistory = true) {
+      if (!getValidSession()) {
+        applyViewDOM('guest');
+        return;
+      }
+      currentCustPage = pageId;
+      document.querySelectorAll('#view-customer .subpage').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('[data-cpage]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cpage === pageId);
+      });
+
+      const titles = {
+        'c-beranda': 'Beranda Nasabah',
+        'c-pinjaman': 'Pinjaman & Simulasi',
+        'c-tabungan': 'Tabungan Digital',
+        'c-tagihan': 'Tagihan & Pembayaran',
+        'c-pesan': 'Pesan & Live Chat'
+      };
+      document.getElementById('cust-page-label').textContent = titles[pageId] || 'Beranda Nasabah';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (recordHistory) {
+        pushNavHistory({ type: 'subpage', view: 'customer', page: pageId });
+      }
+    }
+
+    function activateAdminSubpage(pageId, recordHistory = true) {
+      if (!getValidSession()) {
+        applyViewDOM('guest');
+        return;
+      }
+      currentAdminPage = pageId;
+      document.querySelectorAll('#view-admin .subpage').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+
+      document.querySelectorAll('[data-apage]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.apage === pageId);
+      });
+
+      const titles = {
+        'a-dashboard': 'Dashboard Operasional',
+        'a-nasabah': 'Data Nasabah',
+        'a-pinjaman': 'Manajemen Pinjaman',
+        'a-tabungan': 'Rekap Tabungan',
+        'a-tagihan': 'Tagihan & Pembayaran',
+        'a-pesan': 'Pesan Nasabah',
+        'a-laporan': 'Laporan Keuangan'
+      };
+      document.getElementById('admin-page-label').textContent = titles[pageId] || 'Dashboard';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (recordHistory) {
+        pushNavHistory({ type: 'subpage', view: 'admin', page: pageId });
+      }
+    }
+
+    function navigateSubpage(pageId) {
+      if (pageId.startsWith('c-')) activateCustomerSubpage(pageId, true);
+      else if (pageId.startsWith('a-')) activateAdminSubpage(pageId, true);
+    }
+
+    function loginWithSession(role, userId, officialName) {
+      const session = createSessionToken(role, userId, officialName);
+      persistSession(session);
+      closeModal('modal-auth');
+      navHistoryStack = [];
+      applyViewDOM(session.role);
+      if (session.role === 'admin') {
+        activateAdminSubpage('a-dashboard', false);
+        navHistoryStack = [{ type: 'subpage', view: 'admin', page: 'a-dashboard' }];
+        toast('Login permanen aktif: Panel Admin Operasional.');
+      } else {
+        activateCustomerSubpage('c-beranda', false);
+        navHistoryStack = [{ type: 'subpage', view: 'customer', page: 'c-beranda' }];
+        renderCustomerNotifs();
+        toast(`Selamat datang kembali, ${officialName} (${userId})!`);
+      }
+    }
+
+    function switchRole(targetRole) {
+      const current = getValidSession();
+      if (!current) {
+        openAuthModal('login');
+        return;
+      }
+      const updated = createSessionToken(
+        targetRole,
+        targetRole === 'admin' ? 'ADM-001' : 'OZF-00097',
+        targetRole === 'admin' ? 'Andi Saputra' : 'Budi Santoso'
+      );
+      persistSession(updated);
+      applyViewDOM(targetRole);
+      if (targetRole === 'admin') {
+        activateAdminSubpage('a-dashboard', true);
+      } else {
+        activateCustomerSubpage('c-beranda', true);
+        renderCustomerNotifs();
+      }
+    }
+
+    function previewGuestView() {
+      applyViewDOM('guest');
+      pushNavHistory({ type: 'view', view: 'guest' });
+    }
+
+    /* =====================================================================
+       7. MANUAL LOGOUT WITH CONFIRMATION DIALOG
+       ===================================================================== */
+    function requestLogout() {
+      closeModal('modal-profile');
+      openModal('modal-logout-confirm');
+    }
+
+    function executeLogout() {
+      clearPersistedSession();
+      modalIds.forEach(id => closeModal(id));
+      navHistoryStack = [{ type: 'view', view: 'guest' }];
+      applyViewDOM('guest');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Anda telah keluar dari akun.');
+    }
+
+    /* =====================================================================
+       8. SWIPE BACK NAVIGATION & DOUBLE SWIPE EXIT SYSTEM
+       ===================================================================== */
+    let lastHomeBackTime = 0;
+    const DOUBLE_SWIPE_WINDOW_MS = 2000;
+
+    function isAtRootHome() {
+      if (getTopOpenModal()) return false;
+      if (currentView === 'customer') return currentCustPage === 'c-beranda';
+      if (currentView === 'admin') return currentAdminPage === 'a-dashboard';
+      return currentView === 'guest';
+    }
+
+    function handleBackNavigation() {
+      const openModalId = getTopOpenModal();
+      if (openModalId) {
+        closeModal(openModalId);
+        if (navHistoryStack.length > 1 && navHistoryStack[navHistoryStack.length - 1].type === 'modal') {
+          navHistoryStack.pop();
+        }
+        return;
+      }
+
+      if (navHistoryStack.length > 1) {
+        navHistoryStack.pop();
+        const prev = navHistoryStack[navHistoryStack.length - 1];
+        if (prev.type === 'subpage') {
+          applyViewDOM(prev.view);
+          if (prev.view === 'customer') activateCustomerSubpage(prev.page, false);
+          else if (prev.view === 'admin') activateAdminSubpage(prev.page, false);
+        } else if (prev.type === 'view') {
+          if (prev.view === 'guest' && getValidSession()) {
+            const sess = getValidSession();
+            applyViewDOM(sess.role);
+            if (sess.role === 'customer') activateCustomerSubpage('c-beranda', false);
+            else activateAdminSubpage('a-dashboard', false);
+          } else {
+            applyViewDOM(prev.view);
+          }
+        }
+        return;
+      }
+
+      if (!isAtRootHome()) {
+        if (currentView === 'customer') {
+          activateCustomerSubpage('c-beranda', false);
+          navHistoryStack = [{ type: 'subpage', view: 'customer', page: 'c-beranda' }];
+          return;
+        }
+        if (currentView === 'admin') {
+          activateAdminSubpage('a-dashboard', false);
+          navHistoryStack = [{ type: 'subpage', view: 'admin', page: 'a-dashboard' }];
+          return;
+        }
+      }
+
+      const now = Date.now();
+      if (now - lastHomeBackTime <= DOUBLE_SWIPE_WINDOW_MS) {
+        lastHomeBackTime = 0;
+        toast('Menutup aplikasi OZdigiFinance...');
+        setTimeout(() => {
+          try { window.close(); } catch (_) {}
+          if (window.history.length > 1) {
+            window.history.go(-(window.history.length - 1));
+          }
+        }, 350);
+      } else {
+        lastHomeBackTime = now;
+        toast('Swipe sekali lagi untuk keluar dari aplikasi.');
+      }
+    }
+
+    (function initSwipeBackGesture() {
+      const pillLeft = document.getElementById('swipe-pill-left');
+      const pillRight = document.getElementById('swipe-pill-right');
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let activeEdge = null;
+      let swipeTriggered = false;
+
+      function isInteractiveTarget(target) {
+        if (!target || !target.closest) return false;
+        return Boolean(target.closest('input, textarea, select, [contenteditable="true"], #crop-canvas, .table-scroll, input[type="range"]'));
+      }
+
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        if (isInteractiveTarget(e.target)) {
+          activeEdge = null;
+          return;
+        }
+        const t = e.touches[0];
+        const vw = window.innerWidth;
+        const edgeThreshold = 42;
+
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        swipeTriggered = false;
+
+        if (touchStartX <= edgeThreshold) {
+          activeEdge = 'left';
+        } else if (touchStartX >= vw - edgeThreshold) {
+          activeEdge = 'right';
+        } else {
+          activeEdge = null;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!activeEdge || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = Math.abs(t.clientY - touchStartY);
+
+        if (dy > 48 && Math.abs(dx) < dy) {
+          activeEdge = null;
+          pillLeft.classList.remove('visible');
+          pillRight.classList.remove('visible');
+          return;
+        }
+
+        if (activeEdge === 'left' && dx > 35) {
+          pillLeft.classList.add('visible');
+          if (dx >= 78) swipeTriggered = true;
+        } else if (activeEdge === 'right' && dx < -35) {
+          pillRight.classList.add('visible');
+          if (dx <= -78) swipeTriggered = true;
+        } else {
+          pillLeft.classList.remove('visible');
+          pillRight.classList.remove('visible');
+          swipeTriggered = false;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchend', () => {
+        pillLeft.classList.remove('visible');
+        pillRight.classList.remove('visible');
+        if (activeEdge && swipeTriggered) {
+          handleBackNavigation();
+        }
+        activeEdge = null;
+        swipeTriggered = false;
+      }, { passive: true });
+    })();
+
+    window.addEventListener('popstate', () => {
+      isPopHandling = true;
+      handleBackNavigation();
+      try {
+        history.pushState({ ozGuard: true }, '', '');
+      } catch (_) {}
+      isPopHandling = false;
+    });
+
+    /* =====================================================================
+       9. GUEST SCROLL-SPY & NAVIGATION BINDINGS
+       ===================================================================== */
+    document.querySelectorAll('[data-cpage]').forEach(btn => {
+      btn.addEventListener('click', () => activateCustomerSubpage(btn.dataset.cpage, true));
+    });
+    document.querySelectorAll('[data-apage]').forEach(btn => {
+      btn.addEventListener('click', () => activateAdminSubpage(btn.dataset.apage, true));
+    });
+
+    function scrollToGuest(sectionId, btnEl) {
+      const el = document.getElementById(sectionId);
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 82;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+      if (btnEl) {
+        document.querySelectorAll('#guest-footer-nav button').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+      }
+    }
+
+    window.addEventListener('scroll', () => {
+      if (currentView !== 'guest') return;
+      const sections = ['g-hero', 'g-pinjaman', 'g-tabungan', 'g-simulasi'];
+      let activeId = 'g-hero';
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 160) {
+          activeId = id;
+        }
+      }
+      document.querySelectorAll('#guest-footer-nav button[data-gsec]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.gsec === activeId);
+      });
+    }, { passive: true });
+
+    /* =====================================================================
+       10. LOAN SIMULATOR (TENOR 1-12 BLN, HIDDEN INTEREST & DISBURSEMENT FEE)
+       ===================================================================== */
+    const nominalPresets = [500000, 1000000, 2000000, 3000000, 5000000, 10000000, 15000000, 20000000];
+
+    function formatRupiah(num) {
+      return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+    }
+
+    function formatShortNom(num) {
+      return num >= 1000000 ? 'Rp ' + (num / 1000000) + ' jt' : 'Rp ' + (num / 1000) + ' rb';
+    }
+
+    function computeLoan(amount, months) {
+      let rate = 0.05;
+      if (months === 1) rate = 0.15;
+      else if (months === 2) rate = 0.09;
+
+      const fee = months <= 5 ? 20000 : 50000;
+      const monthlyInstallment = (amount / months) + (amount * rate);
+      const netDisbursed = Math.max(0, amount - fee);
+      return { monthlyInstallment, netDisbursed, months };
+    }
+
+    function mountLoanSimulator(containerId) {
+      const host = document.getElementById(containerId);
+      if (!host) return;
+
+      let state = { amount: 3000000, months: 6 };
+
+      host.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="muted text-xs">Nominal Pinjaman</span>
+          <strong class="sim-nom-label" style="font-size:16px;color:var(--blue)">${formatRupiah(state.amount)}</strong>
+        </div>
+        <div class="chip-grid-nom">
+          ${nominalPresets.map(n => `<button type="button" class="opt-card ${n === state.amount ? 'active' : ''}" data-nom="${n}">${formatShortNom(n)}</button>`).join('')}
+        </div>
+        <input type="range" class="sim-nom-range" min="500000" max="20000000" step="500000" value="${state.amount}">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+          <span class="muted text-xs">Tenor Pinjaman (1 – 12 Bulan)</span>
+          <strong class="sim-tenor-label" style="font-size:15px;color:var(--blue)">${state.months} Bulan</strong>
+        </div>
+        <div class="chip-grid-tenor">
+          ${Array.from({ length: 12 }, (_, i) => i + 1).map(m => `<button type="button" class="opt-card ${m === state.months ? 'active' : ''}" data-tenor="${m}">${m} Bln</button>`).join('')}
+        </div>
+        <input type="range" class="sim-tenor-range" min="1" max="12" step="1" value="${state.months}">
+
+        <div class="sim-result-box">
+          <div>
+            <span>Estimasi Cicilan / Bulan</span>
+            <strong class="sim-out-installment"></strong>
+          </div>
+          <div>
+            <span>Dana Diterima</span>
+            <strong class="sim-out-net" style="color:var(--green)"></strong>
+          </div>
+          <div>
+            <span>Tenor Pilihan</span>
+            <strong class="sim-out-tenor" style="color:var(--text)"></strong>
+          </div>
+        </div>
+      `;
+
+      const nomLabel = host.querySelector('.sim-nom-label');
+      const tenorLabel = host.querySelector('.sim-tenor-label');
+      const nomRange = host.querySelector('.sim-nom-range');
+      const tenorRange = host.querySelector('.sim-tenor-range');
+      const outInstallment = host.querySelector('.sim-out-installment');
+      const outNet = host.querySelector('.sim-out-net');
+      const outTenor = host.querySelector('.sim-out-tenor');
+
+      function refresh() {
+        nomLabel.textContent = formatRupiah(state.amount);
+        tenorLabel.textContent = state.months + ' Bulan';
+        nomRange.value = state.amount;
+        tenorRange.value = state.months;
+
+        host.querySelectorAll('[data-nom]').forEach(b => {
+          b.classList.toggle('active', Number(b.dataset.nom) === state.amount);
+        });
+        host.querySelectorAll('[data-tenor]').forEach(b => {
+          b.classList.toggle('active', Number(b.dataset.tenor) === state.months);
+        });
+
+        const res = computeLoan(state.amount, state.months);
+        outInstallment.textContent = formatRupiah(res.monthlyInstallment);
+        outNet.textContent = formatRupiah(res.netDisbursed);
+        outTenor.textContent = res.months + ' Bulan';
+      }
+
+      host.querySelectorAll('[data-nom]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.amount = Number(btn.dataset.nom);
+          refresh();
+        });
+      });
+
+      host.querySelectorAll('[data-tenor]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.months = Number(btn.dataset.tenor);
+          refresh();
+        });
+      });
+
+      nomRange.addEventListener('input', () => {
+        state.amount = Number(nomRange.value);
+        refresh();
+      });
+
+      tenorRange.addEventListener('input', () => {
+        state.months = Number(tenorRange.value);
+        refresh();
+      });
+
+      refresh();
+    }
+
+    /* =====================================================================
+       11. CUSTOMER & ADMIN OPERATIONS (WITH AUTO SOUND + BELL NOTIFICATIONS)
+       ===================================================================== */
+    function renderCustomerSchedule() {
+      const tbody = document.getElementById('cust-schedule-body');
+      const months = ['Jul 2026', 'Agu 2026', 'Sep 2026', 'Okt 2026', 'Nov 2026', 'Des 2026', 'Jan 2027', 'Feb 2027', 'Mar 2027', 'Apr 2027', 'Mei 2027', 'Jun 2027'];
+      tbody.innerHTML = months.map((m, idx) => {
+        const ke = idx + 1;
+        let statusHtml = '<span class="pill info">Terjadwal</span>';
+        if (ke <= 4) statusHtml = '<span class="pill">Lunas</span>';
+        else if (ke === 5) statusHtml = '<span class="pill warn">Jatuh Tempo</span>';
+        return `<tr>
+          <td><b>Angsuran ke-${ke}</b></td>
+          <td>30 ${m}</td>
+          <td>Rp 1.200.000</td>
+          <td>${statusHtml}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    let currentSavingsBalance = 3450000;
+
+    let adminSavingsAccounts = [
+      { id: 'OZF-00097', officialName: 'Budi Santoso', program: 'Menabung Mingguan', routine: 'Rp 250.000 / minggu', balance: 3450000, lastDate: '24 Nov 2026', status: 'Aktif' },
+      { id: 'OZF-00102', officialName: 'Siti Rahmawati', program: 'Menabung Harian', routine: 'Rp 50.000 / hari', balance: 6800000, lastDate: '26 Nov 2026', status: 'Aktif' },
+      { id: 'OZF-00108', officialName: 'Hendra Wijaya', program: 'Menabung Bulanan', routine: 'Rp 1.500.000 / bulan', balance: 18500000, lastDate: '20 Nov 2026', status: 'Aktif' },
+      { id: 'OZF-00114', officialName: 'Dewi Lestari', program: 'Menabung Mingguan', routine: 'Rp 300.000 / minggu', balance: 8400000, lastDate: '23 Nov 2026', status: 'Aktif' },
+      { id: 'OZF-00119', officialName: 'Agus Pratama', program: 'Menabung Bulanan', routine: 'Rp 2.000.000 / bulan', balance: 11600000, lastDate: '18 Nov 2026', status: 'Aktif' }
+    ];
+
+    let adminSavingsMutations = [
+      { date: '26 Nov 2026', officialName: 'Siti Rahmawati', id: 'OZF-00102', type: 'Setoran', program: 'Menabung Harian', amount: 50000 },
+      { date: '24 Nov 2026', officialName: 'Budi Santoso', id: 'OZF-00097', type: 'Setoran', program: 'Menabung Mingguan', amount: 250000 },
+      { date: '23 Nov 2026', officialName: 'Dewi Lestari', id: 'OZF-00114', type: 'Setoran', program: 'Menabung Mingguan', amount: 300000 },
+      { date: '20 Nov 2026', officialName: 'Hendra Wijaya', id: 'OZF-00108', type: 'Setoran', program: 'Menabung Bulanan', amount: 1500000 },
+      { date: '18 Nov 2026', officialName: 'Agus Pratama', id: 'OZF-00119', type: 'Setoran', program: 'Menabung Bulanan', amount: 2000000 }
+    ];
+
+    let adminMonthlySavingsInflow = 6850000;
+    let adminSavFilterProgram = 'all';
+
+    function syncCustomerSavingsBalance(newBalance) {
+      currentSavingsBalance = newBalance;
+      const budiAcc = adminSavingsAccounts.find(a => a.id === 'OZF-00097');
+      if (budiAcc) budiAcc.balance = newBalance;
+
+      const formatted = formatRupiah(currentSavingsBalance);
+      const el1 = document.getElementById('cust-sav-balance');
+      const el2 = document.getElementById('cust-sav-balance-2');
+      if (el1) el1.textContent = formatted;
+      if (el2) el2.textContent = formatted;
+      renderAdminSavingsTable();
+    }
+
+    function selectSavingsFreq(btn, label) {
+      document.querySelectorAll('#cust-sav-options .sav-option').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('cust-sav-badge').textContent = label;
+      const budiAcc = adminSavingsAccounts.find(a => a.id === 'OZF-00097');
+      if (budiAcc) {
+        budiAcc.program = label;
+        renderAdminSavingsTable();
+      }
+      toast('Opsi tabungan diubah menjadi: ' + label);
+    }
+
+    function openDepositModal() { openModal('modal-deposit'); }
+
+    function submitDeposit(e) {
+      e.preventDefault();
+      const val = Number(document.getElementById('deposit-amount').value || 0);
+      if (val <= 0) return;
+      syncCustomerSavingsBalance(currentSavingsBalance + val);
+      adminMonthlySavingsInflow += val;
+
+      const budiAcc = adminSavingsAccounts.find(a => a.id === 'OZF-00097');
+      if (budiAcc) budiAcc.lastDate = '26 Nov 2026';
+
+      adminSavingsMutations.unshift({
+        date: '26 Nov 2026',
+        officialName: 'Budi Santoso',
+        id: 'OZF-00097',
+        type: 'Setoran',
+        program: budiAcc ? budiAcc.program : 'Menabung Mingguan',
+        amount: val
+      });
+      renderAdminSavingsTable();
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>SAV-20261126-NEW</td><td>Setoran Tabungan Digital</td><td>26 Nov 2026</td><td><b>${formatRupiah(val)}</b></td><td><span class="pill">Berhasil</span></td>`;
+      document.getElementById('cust-tx-body').prepend(tr);
+
+      closeModal('modal-deposit');
+      toast('Setoran tabungan ' + formatRupiah(val) + ' berhasil ditambahkan!');
+    }
+
+    function setAdminSavFilter(program, btnEl) {
+      adminSavFilterProgram = program;
+      document.querySelectorAll('#admin-sav-filters .filter-pill-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      renderAdminSavingsTable();
+    }
+
+    function renderAdminSavingsTable() {
+      const tbody = document.getElementById('admin-sav-accounts-body');
+      const mutBody = document.getElementById('admin-sav-mutations-body');
+      if (!tbody || !mutBody) return;
+
+      const totalManaged = adminSavingsAccounts.reduce((acc, item) => acc + item.balance, 0);
+      const totalKpiEl = document.getElementById('admin-sav-total-kpi');
+      const monthKpiEl = document.getElementById('admin-sav-month-kpi');
+      if (totalKpiEl) totalKpiEl.textContent = formatRupiah(totalManaged);
+      if (monthKpiEl) monthKpiEl.textContent = formatRupiah(adminMonthlySavingsInflow);
+
+      const query = (document.getElementById('admin-sav-search')?.value || '').toLowerCase().trim();
+      const filtered = adminSavingsAccounts.filter(item => {
+        const matchProg = adminSavFilterProgram === 'all' || item.program === adminSavFilterProgram;
+        const matchQuery = !query || item.officialName.toLowerCase().includes(query) || item.id.toLowerCase().includes(query);
+        return matchProg && matchQuery;
+      });
+
+      tbody.innerHTML = filtered.map(acc => {
+        let badgeCls = 'info';
+        if (acc.program === 'Menabung Harian') badgeCls = 'warn';
+        else if (acc.program === 'Menabung Bulanan') badgeCls = '';
+        return `
+          <tr>
+            <td><b>${acc.id}</b></td>
+            <td><b>${acc.officialName}</b></td>
+            <td><span class="pill ${badgeCls}">${acc.program}</span></td>
+            <td>${acc.routine}</td>
+            <td><b style="color:var(--blue)">${formatRupiah(acc.balance)}</b></td>
+            <td>${acc.lastDate}</td>
+            <td><span class="pill">${acc.status}</span></td>
+            <td>
+              <div style="display:flex;gap:5px">
+                <button type="button" class="btn-primary" style="padding:5px 9px;font-size:11px" onclick="openAdminSavingsModal('${acc.id}', 'setor')">+ Setor</button>
+                <button type="button" class="btn-secondary" style="padding:5px 9px;font-size:11px" onclick="openAdminSavingsModal('${acc.id}', 'tarik')">- Tarik</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="8" class="muted" style="text-align:center;padding:18px">Tidak ada rekening tabungan yang cocok dengan pencarian.</td></tr>`;
+
+      mutBody.innerHTML = adminSavingsMutations.map(m => {
+        const isDeposit = m.type === 'Setoran';
+        return `
+          <tr>
+            <td>${m.date}</td>
+            <td><b>${m.officialName}</b> <span class="muted text-xs">(${m.id})</span></td>
+            <td><span class="pill ${isDeposit ? '' : 'bad'}">${m.type}</span></td>
+            <td>${m.program}</td>
+            <td><b style="color:${isDeposit ? 'var(--green)' : 'var(--red)'}">${isDeposit ? '+' : '-'} ${formatRupiah(m.amount)}</b></td>
+            <td><span class="pill info">Terverifikasi Admin</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openAdminSavingsModal(custId, txType) {
+      const selectEl = document.getElementById('admin-sav-cust-select');
+      if (selectEl) {
+        selectEl.innerHTML = adminSavingsAccounts.map(acc =>
+          `<option value="${acc.id}">${acc.id} — ${acc.officialName} (${acc.program} · Saldo: ${formatRupiah(acc.balance)})</option>`
+        ).join('');
+        if (custId) selectEl.value = custId;
+      }
+      const typeEl = document.getElementById('admin-sav-type');
+      if (typeEl && txType) typeEl.value = txType;
+      document.getElementById('admin-sav-note').value = '';
+      openModal('admin-savings-modal');
+    }
+
+    function submitAdminSavingsTx(e) {
+      e.preventDefault();
+      const custId = document.getElementById('admin-sav-cust-select').value;
+      const txType = document.getElementById('admin-sav-type').value;
+      const amount = Number(document.getElementById('admin-sav-amount').value || 0);
+      const note = document.getElementById('admin-sav-note').value.trim();
+      if (amount <= 0) return;
+
+      const acc = adminSavingsAccounts.find(a => a.id === custId);
+      if (!acc) return;
+
+      if (txType === 'tarik' && amount > acc.balance) {
+        toast(`Saldo ${acc.officialName} tidak mencukupi untuk penarikan ${formatRupiah(amount)}.`);
+        return;
+      }
+
+      if (txType === 'setor') {
+        acc.balance += amount;
+        acc.lastDate = '26 Nov 2026';
+        adminMonthlySavingsInflow += amount;
+      } else {
+        acc.balance -= amount;
+      }
+
+      if (acc.id === 'OZF-00097') {
+        syncCustomerSavingsBalance(acc.balance);
+        const custTr = document.createElement('tr');
+        custTr.innerHTML = `<td>SAV-20261126-ADM</td><td>${txType === 'setor' ? 'Setoran Tabungan (Terverifikasi Admin)' : 'Penarikan Saldo Tabungan'}</td><td>26 Nov 2026</td><td><b>${formatRupiah(amount)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+        document.getElementById('cust-tx-body')?.prepend(custTr);
+      }
+
+      adminSavingsMutations.unshift({
+        date: '26 Nov 2026',
+        officialName: acc.officialName,
+        id: acc.id,
+        type: txType === 'setor' ? 'Setoran' : 'Penarikan',
+        program: acc.program,
+        amount: amount
+      });
+
+      const adminMainTr = document.createElement('tr');
+      adminMainTr.innerHTML = `<td><b>${acc.officialName}</b> <span class="muted text-xs">(${acc.id})</span></td><td>SAV-20261126-ADM</td><td>26 Nov 2026</td><td><b>${formatRupiah(amount)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+      document.getElementById('admin-tx-body')?.prepend(adminMainTr);
+
+      // Trigger real-time audio chime & store notification in customer bell icon
+      pushCustomerNotification({
+        custId: acc.id,
+        category: 'sav',
+        title: txType === 'setor' ? 'Verifikasi Setoran Tabungan Berhasil' : 'Verifikasi Penarikan Tabungan Berhasil',
+        desc: `${txType === 'setor' ? 'Setoran' : 'Penarikan'} tabungan sebesar ${formatRupiah(amount)} (${acc.program}) atas nama ${acc.officialName} telah diverifikasi Admin${note ? ' · ' + note : ''}.`,
+        playSound: true
+      });
+
+      renderAdminSavingsTable();
+      closeModal('admin-savings-modal');
+      toast(`🔔 ${txType === 'setor' ? 'Setoran' : 'Penarikan'} ${formatRupiah(amount)} diverifikasi & notifikasi suara dikirim ke ${acc.officialName}!`);
+    }
+
+    function verifyBillItem(btnEl, custId, officialName, billTitle, amount) {
+      btnEl.outerHTML = '<span class="pill">Terverifikasi</span>';
+
+      const adminMainTr = document.createElement('tr');
+      adminMainTr.innerHTML = `<td><b>${officialName}</b> <span class="muted text-xs">(${custId})</span></td><td>TRX-20261126-VER</td><td>26 Nov 2026</td><td><b>${formatRupiah(amount)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+      document.getElementById('admin-tx-body')?.prepend(adminMainTr);
+
+      if (custId === 'OZF-00097') {
+        const custTr = document.createElement('tr');
+        custTr.innerHTML = `<td>TRX-20261126-VER</td><td>Pembayaran ${billTitle}</td><td>26 Nov 2026</td><td><b>${formatRupiah(amount)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+        document.getElementById('cust-tx-body')?.prepend(custTr);
+      }
+
+      pushCustomerNotification({
+        custId,
+        category: 'pay',
+        title: `Pembayaran ${billTitle} Terverifikasi`,
+        desc: `Pembayaran ${billTitle} sebesar ${formatRupiah(amount)} atas nama ${officialName} (${custId}) telah diverifikasi oleh Admin OZdigiFinance.`,
+        playSound: true
+      });
+
+      toast(`🔔 Pembayaran ${officialName} diverifikasi & notifikasi suara dikirim!`);
+    }
+
+    function submitPayProof(e) {
+      e.preventDefault();
+      const billName = document.getElementById('bill-select').value;
+      const nom = Number(document.getElementById('bill-amount').value || 0);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>TRX-20261126-NEW</td><td>${billName}</td><td>26 Nov 2026</td><td><b>${formatRupiah(nom)}</b></td><td><span class="pill warn">Menunggu Verifikasi</span></td>`;
+      document.getElementById('cust-tx-body').prepend(tr);
+      toast('Bukti pembayaran terkirim! Menunggu verifikasi Admin.');
+      activateCustomerSubpage('c-beranda', true);
+    }
+
+    function sendCustChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('cust-chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const box = document.getElementById('cust-chat-box');
+      const outMsg = document.createElement('div');
+      outMsg.className = 'msg-bubble out';
+      outMsg.innerHTML = `${text}<small>Budi Santoso · Baru saja</small>`;
+      box.appendChild(outMsg);
+      input.value = '';
+      box.scrollTop = box.scrollHeight;
+
+      setTimeout(() => {
+        const reply = document.createElement('div');
+        reply.className = 'msg-bubble in';
+        reply.innerHTML = `Terima kasih Pak Budi Santoso, pesan Anda sudah diterima tim Admin OZdigiFinance.<small>Admin OZdigiFinance · Baru saja</small>`;
+        box.appendChild(reply);
+        box.scrollTop = box.scrollHeight;
+      }, 700);
+    }
+
+    function filterTable(tableId, query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
+
+    function openAdminPayModal() { openModal('modal-admin-pay'); }
+
+    function submitAdminPay(e) {
+      e.preventDefault();
+      const [custId, officialName] = document.getElementById('admin-pay-cust').value.split('|');
+      const billDesc = document.getElementById('admin-pay-desc').value.trim() || 'Pembayaran Angsuran';
+      const nom = Number(document.getElementById('admin-pay-nom').value || 0);
+      if (nom <= 0) return;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><b>${officialName}</b> <span class="muted text-xs">(${custId})</span></td><td>TRX-20261126-ADM</td><td>26 Nov 2026</td><td><b>${formatRupiah(nom)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+      document.getElementById('admin-tx-body').prepend(tr);
+
+      if (custId === 'OZF-00097') {
+        const custTr = document.createElement('tr');
+        custTr.innerHTML = `<td>TRX-20261126-ADM</td><td>Pembayaran ${billDesc}</td><td>26 Nov 2026</td><td><b>${formatRupiah(nom)}</b></td><td><span class="pill">Terverifikasi</span></td>`;
+        document.getElementById('cust-tx-body')?.prepend(custTr);
+      }
+
+      pushCustomerNotification({
+        custId,
+        category: 'pay',
+        title: `Verifikasi ${billDesc} Berhasil`,
+        desc: `Pembayaran ${billDesc} sebesar ${formatRupiah(nom)} atas nama ${officialName} (${custId}) telah diverifikasi oleh Admin OZdigiFinance.`,
+        playSound: true
+      });
+
+      closeModal('modal-admin-pay');
+      toast(`🔔 Pembayaran ${officialName} diverifikasi & notifikasi suara terkirim!`);
+    }
+
+    function downloadCsvReport() {
+      const rows = [
+        ['ID Nasabah', 'Nama Resmi', 'ID Transaksi', 'Tanggal', 'Nominal', 'Status'],
+        ['OZF-00124', 'Andi Saputra', 'TRX-20261126-001', '26 Nov 2026', '750000', 'Terverifikasi'],
+        ['OZF-00118', 'Siti Aminah', 'TRX-20261126-002', '26 Nov 2026', '500000', 'Menunggu'],
+        ['OZF-00097', 'Budi Santoso', 'TRX-20261125-018', '25 Nov 2026', '1200000', 'Terverifikasi']
+      ];
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Laporan_OZdigiFinance_2026.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('Laporan CSV berhasil diunduh.');
+    }
+
+    function openAuthModal(mode) {
+      document.getElementById('auth-modal-title').textContent = mode === 'register' ? 'Daftar Akun OZdigiFinance' : 'Masuk ke OZdigiFinance';
+      openModal('modal-auth');
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const rawId = (document.getElementById('auth-id-input').value || '').trim().toUpperCase();
+      if (rawId.startsWith('ADM')) {
+        loginWithSession('admin', rawId, 'Andi Saputra');
+      } else {
+        loginWithSession('customer', rawId || 'OZF-00097', 'Budi Santoso');
+      }
+    }
+
+    /* =====================================================================
+       12. PROFILE PHOTO EDITOR (DRAG CROP, ZOOM 50%-300%, ROTATE 0°-360°)
+       ===================================================================== */
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropCtx = cropCanvas.getContext('2d');
+    let cropImg = null;
+    let cropState = { zoom: 1, rot: 0, x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
+    let displayName = 'Budi Santoso';
+
+    function drawCropCanvas() {
+      const w = cropCanvas.width;
+      const h = cropCanvas.height;
+      cropCtx.clearRect(0, 0, w, h);
+
+      cropCtx.save();
+      cropCtx.translate(w / 2 + cropState.x, h / 2 + cropState.y);
+      cropCtx.rotate((cropState.rot * Math.PI) / 180);
+      cropCtx.scale(cropState.zoom, cropState.zoom);
+
+      if (cropImg) {
+        const ratio = Math.max(w / cropImg.width, h / cropImg.height);
+        const dw = cropImg.width * ratio;
+        const dh = cropImg.height * ratio;
+        cropCtx.drawImage(cropImg, -dw / 2, -dh / 2, dw, dh);
+      } else {
+        const grad = cropCtx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+        grad.addColorStop(0, '#2563eb');
+        grad.addColorStop(1, '#1e3a8a');
+        cropCtx.fillStyle = grad;
+        cropCtx.fillRect(-w / 2, -h / 2, w, h);
+        cropCtx.fillStyle = '#ffffff';
+        cropCtx.font = '800 68px Inter, sans-serif';
+        cropCtx.textAlign = 'center';
+        cropCtx.textBaseline = 'middle';
+        const initials = displayName.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || 'BS';
+        cropCtx.fillText(initials, 0, 4);
+      }
+      cropCtx.restore();
+    }
+
+    function openProfileModal() {
+      document.getElementById('edit-display-name').value = displayName;
+      drawCropCanvas();
+      openModal('modal-profile');
+    }
+
+    function updateCropControls() {
+      const z = Number(document.getElementById('crop-zoom').value);
+      const r = Number(document.getElementById('crop-rot').value);
+      document.getElementById('zoom-val').textContent = z;
+      document.getElementById('rot-val').textContent = r;
+      cropState.zoom = z / 100;
+      cropState.rot = r;
+      drawCropCanvas();
+    }
+
+    function stepRotate(deg) {
+      const slider = document.getElementById('crop-rot');
+      let next = (Number(slider.value) + deg) % 360;
+      if (next < 0) next += 360;
+      slider.value = next;
+      updateCropControls();
+    }
+
+    function resetCrop() {
+      cropState = { zoom: 1, rot: 0, x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
+      document.getElementById('crop-zoom').value = 100;
+      document.getElementById('crop-rot').value = 0;
+      updateCropControls();
+    }
+
+    document.getElementById('avatar-file-input').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          cropImg = img;
+          resetCrop();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function startDrag(cx, cy) {
+      cropState.dragging = true;
+      cropState.startX = cx - cropState.x;
+      cropState.startY = cy - cropState.y;
+    }
+    function moveDrag(cx, cy) {
+      if (!cropState.dragging) return;
+      cropState.x = cx - cropState.startX;
+      cropState.y = cy - cropState.startY;
+      drawCropCanvas();
+    }
+    function endDrag() { cropState.dragging = false; }
+
+    cropCanvas.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+    window.addEventListener('mouseup', endDrag);
+
+    cropCanvas.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+    }, { passive: true });
+    cropCanvas.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      moveDrag(t.clientX, t.clientY);
+    }, { passive: true });
+    cropCanvas.addEventListener('touchend', endDrag);
+
+    function togglePassVis() {
+      const p = document.getElementById('edit-pass');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    }
+
+    function saveProfileChanges() {
+      const newName = document.getElementById('edit-display-name').value.trim();
+      const newPass = document.getElementById('edit-pass').value;
+
+      if (newPass && newPass.length < 6) {
+        toast('Password baru minimal 6 karakter.');
+        return;
+      }
+
+      if (newName) {
+        displayName = newName;
+        document.getElementById('cust-greeting-name').textContent = displayName;
+        try { localStorage.setItem('oz_display_name', displayName); } catch (_) {}
+      }
+
+      const dataUrl = cropCanvas.toDataURL('image/png');
+      document.querySelectorAll('[data-avatar]').forEach(btn => {
+        btn.innerHTML = `<img src="${dataUrl}" alt="Profil">`;
+      });
+      try { localStorage.setItem('oz_avatar_url', dataUrl); } catch (_) {}
+
+      document.getElementById('edit-pass').value = '';
+      closeModal('modal-profile');
+      toast('Profil diperbarui! Nama resmi di kontrak & data Admin tetap Budi Santoso.');
+    }
+
+    /* =====================================================================
+       13. APP BOOTSTRAP & AUTOMATIC SESSION RESTORATION
+       ===================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        const savedTheme = localStorage.getItem('oz_theme');
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          document.documentElement.setAttribute('data-theme', savedTheme);
+          document.getElementById('theme-meta').setAttribute('content', savedTheme === 'dark' ? '#0f172a' : '#edf3f8');
+        }
+        const savedName = localStorage.getItem('oz_display_name');
+        if (savedName) {
+          displayName = savedName;
+          document.getElementById('cust-greeting-name').textContent = displayName;
+        }
+        const savedAvatar = localStorage.getItem('oz_avatar_url');
+        if (savedAvatar) {
+          document.querySelectorAll('[data-avatar]').forEach(btn => {
+            btn.innerHTML = `<img src="${savedAvatar}" alt="Profil">`;
+          });
+        }
+      } catch (_) {}
+
+      renderBrands();
+      mountLoanSimulator('cust-loan-sim');
+      mountLoanSimulator('guest-loan-sim');
+      renderCustomerSchedule();
+      renderAdminSavingsTable();
+      renderCustomerNotifs();
+      drawCropCanvas();
+
+      try {
+        history.replaceState({ ozRoot: true }, '', '');
+        history.pushState({ ozGuard: true }, '', '');
+      } catch (_) {}
+
+      const activeSession = getValidSession();
+      if (activeSession) {
+        applyViewDOM(activeSession.role);
+        if (activeSession.role === 'admin') {
+          activateAdminSubpage('a-dashboard', false);
+          navHistoryStack = [{ type: 'subpage', view: 'admin', page: 'a-dashboard' }];
+        } else {
+          activateCustomerSubpage('c-beranda', false);
+          navHistoryStack = [{ type: 'subpage', view: 'customer', page: 'c-beranda' }];
+        }
+      } else {
+        applyViewDOM('guest');
+        navHistoryStack = [{ type: 'view', view: 'guest' }];
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background-color: #f3f6fa;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark body {
+    background-color: #0b1120;
+    color: #f1f5f9;
+  }
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signature 3D embossed OZdigiFinance wordmark without heavy continuous filter repaints */
+.brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.brand-blue {
+  color: #1d4ed8;
+  text-shadow: 0 1px 0 #1e3a8a, 0 2px 4px rgba(29, 78, 216, 0.22);
+}
+
+html.dark .brand-blue {
+  color: #60a5fa;
+  text-shadow: 0 1px 0 #1e40af, 0 2px 6px rgba(59, 130, 246, 0.25);
+}
+
+.brand-silver {
+  color: #475569;
+  text-shadow: 0 1px 0 #cbd5e1;
+}
+
+html.dark .brand-silver {
+  color: #cbd5e1;
+  text-shadow: 0 1px 0 #334155;
+}
+
+/* Bell urgent ring animation triggered only on notification events */
+@keyframes bellUrgent {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(18deg) scale(1.1); }
+  40% { transform: rotate(-16deg) scale(1.1); }
+  60% { transform: rotate(12deg) scale(1.05); }
+  80% { transform: rotate(-8deg) scale(1.02); }
+}
+
+.bell-urgent {
+  animation: bellUrgent 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: 50% 18%;
+}
+
+/* Custom range input styling for crisp tactile feedback */
+input[type="range"].oz-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #dbe4f0;
+  outline: none;
+  cursor: pointer;
+}
+
+html.dark input[type="range"].oz-range {
+  background: #334155;
+}
+
+input[type="range"].oz-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"].oz-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+input[type="range"].oz-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
