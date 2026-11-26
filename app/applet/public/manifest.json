@@ -1,11 +1,13 @@
 {
   "id": "/",
-  "name": "OZdigiFinance — Solusi Finansial Digital Anda",
-  "short_name": "OZFin",
-  "description": "Platform pinjaman dan tabungan digital yang intuitif dan responsif.",
+  "name": "OZdigiFinance",
+  "short_name": "OZdigiFinance",
+  "description": "Solusi Pinjaman Cepat & Tabungan Terencana dalam Satu Aplikasi",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
+  "prefer_related_applications": false,
   "background_color": "#0b1120",
   "theme_color": "#0b1120",
   "icons": [
