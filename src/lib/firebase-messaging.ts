@@ -56,9 +56,8 @@ export async function registerFcmServiceWorker(): Promise<ServiceWorkerRegistrat
   }
   try {
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-      scope: '/',
+      scope: '/firebase-cloud-messaging-push-scope',
     });
-    await navigator.serviceWorker.ready;
     return registration;
   } catch {
     return null;

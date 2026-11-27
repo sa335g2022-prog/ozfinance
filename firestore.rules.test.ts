@@ -30,7 +30,7 @@ test('firestore.rules validates IDs strictly and prevents get/exists inside allo
 
 test('firestore.rules forbids client deletion of ledger transactions and customer system messages', () => {
   const rules = fs.readFileSync(rulesPath, 'utf-8');
-  assert.match(rules, /match\s+\/transactions\/\{transactionId\}[\s\S]*allow\s+create:\s+if\s+isAdmin\(\)/);
+  assert.match(rules, /match\s+\/transactions\/\{transactionId\}[\s\S]*allow\s+create:\s+if\s+isVerifiedUser\(\)[\s\S]*isAdmin\(\)/);
   assert.match(rules, /match\s+\/transactions\/\{transactionId\}[\s\S]*allow\s+delete:\s+if\s+false;/);
   assert.match(rules, /incoming\(\)\.messageType\s*!=\s*'system_payment'/);
   assert.match(rules, /incoming\(\)\.senderRole\s*==\s*'customer'/);

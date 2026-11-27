@@ -22,6 +22,7 @@ import {
   Trash2,
   Upload,
   User,
+  UserPlus,
   Volume2,
   VolumeX,
   Wallet,
@@ -433,6 +434,7 @@ interface ProfileModalProps {
   officialName: string;
   firebaseEmail?: string | null;
   firebaseConnected?: boolean;
+  pendingSyncCount?: number;
   onLinkFirebaseGoogle?: () => Promise<void> | void;
   soundEnabled?: boolean;
   onToggleSound?: () => void;
@@ -455,6 +457,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   officialName,
   firebaseEmail,
   firebaseConnected = true,
+  pendingSyncCount = 0,
   onLinkFirebaseGoogle,
   soundEnabled = true,
   onToggleSound,
@@ -894,13 +897,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
             <span
               data-testid="profile-firebase-status"
-              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 truncate"
+              className={`text-[11px] font-semibold truncate ${
+                firebaseEmail
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-amber-700 dark:text-amber-400'
+              }`}
             >
               {firebaseEmail
-                ? firebaseEmail
+                ? pendingSyncCount > 0
+                  ? `${firebaseEmail} · Sinkronisasi (${pendingSyncCount})`
+                  : `Sinkron Cloud: ${firebaseEmail}`
                 : firebaseConnected
-                ? 'Firebase Terhubung'
-                : 'Sinkronisasi Siap'}
+                ? 'Mode Lokal · Belum Taut Cloud'
+                : 'Mode Lokal Offline'}
             </span>
           </div>
 
@@ -947,7 +956,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 className="min-h-[36px] px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-bold inline-flex items-center gap-1.5 hover:border-blue-500"
               >
                 <Cloud className="w-3.5 h-3.5" />
-                <span>Tautkan Akun Google UID</span>
+                <span>Sinkronkan Cloud Firebase</span>
               </button>
             )}
           </div>
@@ -993,7 +1002,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 };
 
 /* =====================================================================
-   3. AUTH MODAL (WA + PASSWORD FOR NASABAH, EMAIL + PASSWORD FOR ADMIN, + REAL FINGERPRINT)
+   3. AUTH MODAL (WA + PASSWORD LOGIN, REGISTER NASABAH BARU, ADMIN LOGIN, + WEBAUTHN)
    ===================================================================== */
 interface AuthModalProps {
   mode: 'login' | 'register';
@@ -1002,6 +1011,11 @@ interface AuthModalProps {
   customerPasswords: Record<string, string>;
   adminPassword: string;
   onGoogleSignIn?: (roleTab: 'customer' | 'admin') => Promise<{ ok: boolean; error?: string }>;
+  onRegisterCustomer?: (
+    officialName: string,
+    whatsapp: string,
+    password: string
+  ) => { ok: true } | { ok: false; error: string };
   onLogin: (
     role: 'customer' | 'admin',
     userId: string,
@@ -1018,13 +1032,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   customerPasswords,
   adminPassword,
   onGoogleSignIn,
+  onRegisterCustomer,
   onLogin,
   onClose,
 }) => {
-  const [loginTab, setLoginTab] = useState<'customer' | 'admin'>(initialTab);
+  const [loginTab, setLoginTab] = useState<'customer' | 'register' | 'admin'>(() =>
+    mode === 'register' ? 'register' : initialTab
+  );
   const [waInput, setWaInput] = useState('');
   const [custPassInput, setCustPassInput] = useState('');
   const [showCustPass, setShowCustPass] = useState(false);
+
+  const [regNameInput, setRegNameInput] = useState('');
+  const [regWaInput, setRegWaInput] = useState('');
+  const [regPassInput, setRegPassInput] = useState('');
+  const [showRegPass, setShowRegPass] = useState(false);
 
   const [adminEmailInput, setAdminEmailInput] = useState('');
   const [adminPassInput, setAdminPassInput] = useState('');
@@ -1033,6 +1055,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [authError, setAuthError] = useState<string | null>(null);
   const [fpBusy, setFpBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+
+  useEffect(() => {
+    setLoginTab(mode === 'register' ? 'register' : initialTab);
+    setAuthError(null);
+  }, [mode, initialTab]);
 
   const handleCustomerSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1043,6 +1070,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
     onLogin('customer', res.customer.id, res.customer.officialName, res.customer.whatsapp);
+  };
+
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (!onRegisterCustomer) {
+      setAuthError('Pendaftaran nasabah belum tersedia.');
+      return;
+    }
+    const res = onRegisterCustomer(regNameInput, regWaInput, regPassInput);
+    if (!res.ok) {
+      setAuthError(res.error);
+    }
   };
 
   const handleAdminSubmit = (e: React.FormEvent) => {
@@ -1084,7 +1124,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!onGoogleSignIn) return;
     setAuthError(null);
     setGoogleBusy(true);
-    const res = await onGoogleSignIn(loginTab);
+    const res = await onGoogleSignIn(loginTab === 'admin' ? 'admin' : 'customer');
     setGoogleBusy(false);
     if (!res.ok && res.error) {
       setAuthError(res.error);
@@ -1093,11 +1133,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <ModalShell
-      title={mode === 'register' ? 'Masuk / Aktivasi Akun OZdigiFinance' : 'Masuk ke OZdigiFinance'}
+      title={
+        loginTab === 'register'
+          ? 'Daftar Nasabah Baru OZdigiFinance'
+          : 'Masuk ke OZdigiFinance'
+      }
       onClose={onClose}
     >
-      {/* Role Tabs */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4">
+      {/* Role & Registration Tabs */}
+      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4">
         <button
           type="button"
           data-testid="auth-tab-customer"
@@ -1105,14 +1149,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setLoginTab('customer');
             setAuthError(null);
           }}
-          className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors ${
+          className={`min-h-[38px] px-2 py-1.5 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1 transition-colors ${
             loginTab === 'customer'
               ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
               : 'text-slate-600 dark:text-slate-300'
           }`}
         >
-          <User className="w-3.5 h-3.5" />
-          <span>Login Nasabah</span>
+          <User className="w-3.5 h-3.5 shrink-0" />
+          <span>Nasabah</span>
+        </button>
+        <button
+          type="button"
+          data-testid="auth-tab-register"
+          onClick={() => {
+            setLoginTab('register');
+            setAuthError(null);
+          }}
+          className={`min-h-[38px] px-2 py-1.5 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1 transition-colors ${
+            loginTab === 'register'
+              ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-300'
+          }`}
+        >
+          <UserPlus className="w-3.5 h-3.5 shrink-0" />
+          <span>Daftar</span>
         </button>
         <button
           type="button"
@@ -1121,14 +1181,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setLoginTab('admin');
             setAuthError(null);
           }}
-          className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors ${
+          className={`min-h-[38px] px-2 py-1.5 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1 transition-colors ${
             loginTab === 'admin'
               ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
               : 'text-slate-600 dark:text-slate-300'
           }`}
         >
-          <Shield className="w-3.5 h-3.5" />
-          <span>Login Admin</span>
+          <Shield className="w-3.5 h-3.5 shrink-0" />
+          <span>Admin</span>
         </button>
       </div>
 
@@ -1141,7 +1201,125 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
       )}
 
-      {loginTab === 'customer' ? (
+      {loginTab === 'register' ? (
+        <form onSubmit={handleRegisterSubmit} className="space-y-3.5" data-testid="auth-register-form">
+          <div>
+            <label
+              htmlFor="auth-reg-name-input"
+              className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
+              Nama Lengkap Sesuai Identitas
+            </label>
+            <div className="relative">
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                id="auth-reg-name-input"
+                data-testid="auth-reg-name-input"
+                type="text"
+                value={regNameInput}
+                onChange={(e) => setRegNameInput(e.target.value)}
+                placeholder="Contoh: Rina Sari"
+                required
+                className="w-full min-h-[42px] pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="auth-reg-wa-input"
+              className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
+              No. WhatsApp Aktif
+            </label>
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                id="auth-reg-wa-input"
+                data-testid="auth-reg-wa-input"
+                type="tel"
+                value={regWaInput}
+                onChange={(e) => setRegWaInput(e.target.value)}
+                placeholder="Contoh: 081234567890"
+                required
+                className="w-full min-h-[42px] pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="auth-reg-pass-input"
+              className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
+              Buat Password Akun
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="auth-reg-pass-input"
+                  data-testid="auth-reg-pass-input"
+                  type={showRegPass ? 'text' : 'password'}
+                  value={regPassInput}
+                  onChange={(e) => setRegPassInput(e.target.value)}
+                  placeholder="Min. 4 karakter (kosong = No. WhatsApp)"
+                  className="w-full min-h-[42px] pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRegPass((v) => !v)}
+                aria-label={showRegPass ? 'Sembunyikan password' : 'Tampilkan password'}
+                className="w-11 h-[42px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0"
+              >
+                {showRegPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              Setelah mendaftar, akun nasabah Anda langsung aktif dan dapat langsung digunakan untuk masuk.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            data-testid="auth-reg-submit-btn"
+            className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+          >
+            Daftar &amp; Masuk Sekarang
+          </button>
+
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            {onGoogleSignIn && (
+              <button
+                type="button"
+                data-testid="auth-google-register-btn"
+                disabled={googleBusy}
+                onClick={() => void handleGoogleLoginClick()}
+                className="w-full min-h-[42px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-emerald-500 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Cloud className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {googleBusy ? 'Menghubungkan Google...' : 'Daftar / Masuk via Google (Cloud)'}
+                </span>
+              </button>
+            )}
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Sudah terdaftar?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginTab('customer');
+                  setAuthError(null);
+                }}
+                className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Login Nasabah
+              </button>
+            </p>
+          </div>
+        </form>
+      ) : loginTab === 'customer' ? (
         <form onSubmit={handleCustomerSubmit} className="space-y-3.5">
           <div>
             <label
@@ -1234,6 +1412,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </span>
               </button>
             )}
+
+            <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+              Belum punya akun?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginTab('register');
+                  setAuthError(null);
+                }}
+                className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Daftar Nasabah Baru
+              </button>
+            </p>
           </div>
         </form>
       ) : (

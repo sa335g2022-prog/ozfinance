@@ -301,8 +301,21 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow get: if isSignedIn() && isValidId(customerId) && (existing().ownerUid == request.auth.uid || isAdmin());
       allow list: if isAdminToken() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create: if isAdmin() && isValidId(customerId) && isValidCustomerRecord(incoming())
-        && incoming().id == customerId && incoming().updatedAt == request.time;
+      allow create: if isVerifiedUser() && isValidId(customerId) && isValidCustomerRecord(incoming())
+        && incoming().id == customerId && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid
+            && incoming().activeLoan == 0
+            && incoming().monthlyInstallment == 0
+            && incoming().paidInstallments == 0
+            && incoming().totalInstallments == 0
+            && incoming().remainingDebt == 0
+            && incoming().loans.size() == 0
+            && incoming().status == 'Aktif'
+          )
+        );
       allow update: if isAdmin() && isValidId(customerId) && isValidCustomerRecord(incoming())
         && incoming().id == existing().id && incoming().updatedAt == request.time;
       allow delete: if isAdmin() && isValidId(customerId);
@@ -311,10 +324,29 @@ service cloud.firestore {
     match /savingsAccounts/{accountId} {
       allow get: if isSignedIn() && isValidId(accountId) && (existing().ownerUid == request.auth.uid || isAdmin());
       allow list: if isAdminToken() || (isSignedIn() && resource.data.ownerUid == request.auth.uid);
-      allow create: if isAdmin() && isValidId(accountId) && isValidSavingsAccount(incoming())
-        && incoming().id == accountId && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(accountId) && isValidSavingsAccount(incoming())
-        && incoming().id == existing().id && incoming().updatedAt == request.time;
+      allow create: if isVerifiedUser() && isValidId(accountId) && isValidSavingsAccount(incoming())
+        && incoming().id == accountId && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid
+            && incoming().status == 'Aktif'
+            && incoming().balance >= 0
+          )
+        );
+      allow update: if isVerifiedUser() && isValidId(accountId) && isValidSavingsAccount(incoming())
+        && incoming().id == existing().id && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid
+            && incoming().ownerUid == existing().ownerUid
+            && incoming().balance >= existing().balance
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'program', 'routine', 'balance', 'lastDate', 'updatedAt'
+            ])
+          )
+        );
       allow delete: if isAdmin() && isValidId(accountId);
     }
 
@@ -389,9 +421,21 @@ service cloud.firestore {
     match /transactions/{transactionId} {
       allow get: if isSignedIn() && isValidId(transactionId) && (existing().customerUid == request.auth.uid || isAdmin());
       allow list: if isAdminToken() || (isSignedIn() && resource.data.customerUid == request.auth.uid);
-      allow create: if isAdmin() && isValidId(transactionId) && isValidTransaction(incoming())
+      allow create: if isVerifiedUser() && isValidId(transactionId) && isValidTransaction(incoming())
         && incoming().transactionId == transactionId
-        && incoming().createdAt == request.time;
+        && incoming().createdAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().customerUid == request.auth.uid
+            && exists(/databases/$(database)/documents/customers/$(incoming().customerId))
+            && get(/databases/$(database)/documents/customers/$(incoming().customerId)).data.ownerUid == request.auth.uid
+            && (
+              (incoming().jenisTransaksi == 'payment_proof' && incoming().status == 'Menunggu Verifikasi') ||
+              (incoming().jenisTransaksi == 'savings' && incoming().status == 'Berhasil')
+            )
+          )
+        );
       allow update: if isAdmin() && isValidId(transactionId) && isValidTransaction(incoming())
         && incoming().transactionId == existing().transactionId
         && incoming().createdAt == existing().createdAt;

@@ -1,0 +1,64 @@
+{
+  "id": "/",
+  "name": "OZdigiFinance",
+  "short_name": "OZdigiFinance",
+  "description": "Solusi Pinjaman Cepat & Tabungan Terencana dalam Satu Aplikasi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "prefer_related_applications": false,
+  "background_color": "#0b1120",
+  "theme_color": "#0b1120",
+  "lang": "id",
+  "categories": ["finance", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Masuk Akun",
+      "short_name": "Masuk",
+      "description": "Masuk ke akun Nasabah atau Admin OZdigiFinance",
+      "url": "/?open=login",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Daftar Nasabah",
+      "short_name": "Daftar",
+      "description": "Pendaftaran nasabah baru OZdigiFinance",
+      "url": "/?open=register",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

@@ -9,17 +9,20 @@ import {
   computeLoan,
   computeSessionSignature,
   DEFAULT_ADMIN_PASSWORD,
+  ensureCustomerDefaultPassword,
   formatPaymentSystemMessage,
   formatRupiah,
   formatShortNominal,
   generateNextCustomerId,
   isValidSessionPayload,
   normalizePhoneDigits,
+  registerNewCustomerAccount,
   summarizeCustomerFromLoans,
   toWhatsAppHref,
   verifyAdminLogin,
   verifyCustomerLogin,
 } from './finance';
+import { detectIOSBrowser, shouldShowInstallBanner } from './pwa';
 
 test('toWhatsAppHref normalizes Indonesian 08xx numbers to wa.me/628xx', () => {
   assert.equal(toWhatsAppHref('087736661267'), 'https://wa.me/6287736661267');
@@ -253,4 +256,102 @@ test('formatPaymentSystemMessage generates exact required automated notification
   assert.ok(msg.includes('Status: BERHASIL DICATAT'));
   assert.ok(msg.endsWith('Terima kasih telah melakukan pembayaran.'));
 });
+
+test('registerNewCustomerAccount creates customer ID, normalizes WA, prevents duplicates, and enables instant login', () => {
+  const existing = summarizeCustomerFromLoans({
+    id: 'OZF-00001',
+    officialName: "B'DONK",
+    whatsapp: '087736661267',
+    status: 'Aktif',
+    loans: [],
+  });
+
+  const duplicateRes = registerNewCustomerAccount({
+    existingCustomers: [existing],
+    officialName: 'Duplikat',
+    whatsapp: '+62 877-3666-1267',
+    password: 'pass123',
+  });
+  assert.equal(duplicateRes.ok, false);
+
+  const shortPassRes = registerNewCustomerAccount({
+    existingCustomers: [existing],
+    officialName: 'Siti Aminah',
+    whatsapp: '081299887766',
+    password: '12',
+  });
+  assert.equal(shortPassRes.ok, false);
+
+  const okRes = registerNewCustomerAccount({
+    existingCustomers: [existing],
+    officialName: 'Siti Aminah',
+    whatsapp: '+62 812-9988-7766',
+    password: 'mypassword',
+  });
+  assert.equal(okRes.ok, true);
+  if (okRes.ok) {
+    assert.equal(okRes.customer.id, 'OZF-00002');
+    assert.equal(okRes.customer.whatsapp, '081299887766');
+    assert.equal(okRes.customer.loans.length, 0);
+    assert.equal(okRes.password, 'mypassword');
+    const loginCheck = verifyCustomerLogin(
+      [existing, okRes.customer],
+      { [okRes.customer.id]: okRes.password },
+      '081299887766',
+      'mypassword'
+    );
+    assert.equal(loginCheck.ok, true);
+  }
+});
+
+test('ensureCustomerDefaultPassword enables immediate login for admin-added customers without overwriting custom passwords', () => {
+  const adminAdded = summarizeCustomerFromLoans({
+    id: 'OZF-00015',
+    officialName: 'Nasabah Baru Admin',
+    whatsapp: '081355443322',
+    status: 'Aktif',
+    loans: [],
+  });
+
+  const passMap = ensureCustomerDefaultPassword(adminAdded, {});
+  assert.equal(passMap['OZF-00015'], '081355443322');
+  assert.equal(
+    verifyCustomerLogin([adminAdded], passMap, '+6281355443322', '081355443322').ok,
+    true
+  );
+
+  const preservedMap = ensureCustomerDefaultPassword(adminAdded, {
+    'OZF-00015': 'custom999',
+  });
+  assert.equal(preservedMap['OZF-00015'], 'custom999');
+});
+
+test('PWA helpers enforce standalone suppression, cooldown reminder, and iOS UA detection', () => {
+  assert.equal(
+    shouldShowInstallBanner({ isInstalled: true, dismissedUntilMs: null, nowMs: 1000 }),
+    false
+  );
+  assert.equal(
+    shouldShowInstallBanner({ isInstalled: false, dismissedUntilMs: 5000, nowMs: 1000 }),
+    false
+  );
+  assert.equal(
+    shouldShowInstallBanner({ isInstalled: false, dismissedUntilMs: 500, nowMs: 1000 }),
+    true
+  );
+  assert.equal(
+    shouldShowInstallBanner({ isInstalled: false, dismissedUntilMs: null, nowMs: 1000 }),
+    true
+  );
+
+  assert.equal(
+    detectIOSBrowser('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15'),
+    true
+  );
+  assert.equal(
+    detectIOSBrowser('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36'),
+    false
+  );
+});
+
 

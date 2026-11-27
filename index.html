@@ -3,9 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f3f6fa" id="theme-meta" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="OZdigiFinance" />
+    <meta name="theme-color" content="#0b1120" id="theme-meta" />
     <title>OZdigiFinance — Solusi Finansial Digital Anda</title>
     <meta
       name="description"
@@ -25,12 +23,27 @@
       rel="stylesheet"
     />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="OZdigiFinance" />
+    <script>
+      window.__ozfDeferredPrompt = null;
+      window.__ozfAppInstalled = false;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__ozfDeferredPrompt = e;
+        window.dispatchEvent(new CustomEvent('ozf:beforeinstallprompt'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__ozfDeferredPrompt = null;
+        window.__ozfAppInstalled = true;
+        window.dispatchEvent(new CustomEvent('ozf:appinstalled'));
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

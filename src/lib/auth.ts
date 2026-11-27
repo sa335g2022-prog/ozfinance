@@ -23,7 +23,12 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { INITIAL_CHAT_THREADS, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from '../data/seed';
+import {
+  INITIAL_CHAT_THREADS,
+  INITIAL_CUSTOMERS,
+  INITIAL_SAVINGS_ACCOUNTS,
+  INITIAL_TRANSACTIONS,
+} from '../data/seed';
 import type { CustomerRegistryItem, SavingsAccount } from '../types/app';
 import { ADMIN_EMAIL, normalizePhoneDigits } from '../utils/finance';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from './firebase';
@@ -204,6 +209,29 @@ export async function updateUserSoundPreferenceInFirestore(
   }
 }
 
+export async function updateUserProfileInFirestore(params: {
+  uid: string;
+  nama?: string;
+  whatsapp?: string;
+}): Promise<void> {
+  try {
+    const ref = doc(db, 'users', params.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    await setDoc(
+      ref,
+      {
+        ...(params.nama ? { nama: params.nama.slice(0, 120) } : {}),
+        ...(params.whatsapp ? { whatsapp: params.whatsapp.slice(0, 32) } : {}),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch {
+    // Non-blocking if profile update is restricted
+  }
+}
+
 /**
  * Seeds initial customers, conversations, and transactions into Firestore ONLY once
  * when `/customers` is empty so existing records are preserved forever.
@@ -267,6 +295,21 @@ export async function seedFirestoreIfEmpty(adminUid: string): Promise<boolean> {
       }
     }
 
+    for (const acc of INITIAL_SAVINGS_ACCOUNTS) {
+      batch.set(doc(db, 'savingsAccounts', acc.id), {
+        id: acc.id,
+        ownerUid: '',
+        officialName: acc.officialName,
+        whatsapp: acc.whatsapp,
+        program: acc.program,
+        routine: acc.routine,
+        balance: acc.balance,
+        lastDate: acc.lastDate,
+        status: acc.status,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
     for (const tx of INITIAL_TRANSACTIONS) {
       const cust = INITIAL_CUSTOMERS.find((c) => c.id === tx.custId);
       batch.set(doc(db, 'transactions', tx.id), {
@@ -328,10 +371,18 @@ export async function saveCustomerToFirestore(
 ): Promise<void> {
   const path = `customers/${customer.id}`;
   try {
-    const existing = await getDoc(doc(db, 'customers', customer.id));
-    const resolvedOwner =
-      ownerUid ||
-      (existing.exists() ? (existing.data().ownerUid as string) || '' : '');
+    let existingOwner = '';
+    if (!ownerUid) {
+      try {
+        const existing = await getDoc(doc(db, 'customers', customer.id));
+        if (existing.exists()) {
+          existingOwner = (existing.data().ownerUid as string) || '';
+        }
+      } catch {
+        existingOwner = '';
+      }
+    }
+    const resolvedOwner = ownerUid || existingOwner;
 
     await setDoc(doc(db, 'customers', customer.id), {
       id: customer.id,
@@ -384,6 +435,11 @@ export async function linkCustomerUidByWhatsapp(
       { customerUid: uid, lastMessageAt: serverTimestamp() },
       { merge: true }
     );
+    await setDoc(
+      doc(db, 'savingsAccounts', match.id),
+      { ownerUid: uid, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
   } catch {
     // Only Admin or linked owner can update
   }
@@ -418,9 +474,27 @@ export async function saveSavingsToFirestore(
 ): Promise<void> {
   const path = `savingsAccounts/${account.id}`;
   try {
+    let existingOwner = '';
+    if (!ownerUid) {
+      try {
+        const existing = await getDoc(doc(db, 'savingsAccounts', account.id));
+        if (existing.exists()) {
+          existingOwner = (existing.data().ownerUid as string) || '';
+        }
+      } catch {
+        existingOwner = '';
+      }
+    }
     await setDoc(doc(db, 'savingsAccounts', account.id), {
-      ...account,
-      ownerUid,
+      id: account.id,
+      ownerUid: ownerUid || existingOwner,
+      officialName: account.officialName.slice(0, 120),
+      whatsapp: account.whatsapp.slice(0, 32),
+      program: account.program,
+      routine: account.routine.slice(0, 120),
+      balance: Math.max(0, account.balance),
+      lastDate: account.lastDate.slice(0, 32),
+      status: account.status,
       updatedAt: serverTimestamp(),
     });
   } catch (err) {

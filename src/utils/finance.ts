@@ -287,6 +287,81 @@ export function verifyAdminLogin(
   return { ok: true };
 }
 
+export function registerNewCustomerAccount(params: {
+  existingCustomers: CustomerRegistryItem[];
+  officialName: string;
+  whatsapp: string;
+  password?: string;
+}):
+  | {
+      ok: true;
+      customer: CustomerRegistryItem;
+      password: string;
+    }
+  | { ok: false; error: string } {
+  const cleanName = params.officialName.trim();
+  if (cleanName.length < 2) {
+    return { ok: false, error: 'Nama lengkap minimal 2 karakter.' };
+  }
+
+  const rawWa = params.whatsapp.trim();
+  const normalizedWa = normalizePhoneDigits(rawWa);
+  if (normalizedWa.length < 8) {
+    return {
+      ok: false,
+      error: 'Masukkan nomor WhatsApp aktif yang valid (minimal 8 digit).',
+    };
+  }
+
+  const duplicate = params.existingCustomers.find(
+    (c) => normalizePhoneDigits(c.whatsapp) === normalizedWa
+  );
+  if (duplicate) {
+    return {
+      ok: false,
+      error: `Nomor WhatsApp ${rawWa} sudah terdaftar atas nama ${duplicate.officialName}. Silakan masuk melalui Login Nasabah.`,
+    };
+  }
+
+  const rawPassword = (params.password ?? '').trim();
+  const resolvedPassword = rawPassword.length > 0 ? rawPassword : normalizedWa;
+  if (resolvedPassword.length < 4) {
+    return {
+      ok: false,
+      error: 'Password akun minimal 4 karakter.',
+    };
+  }
+
+  const nextId = generateNextCustomerId(params.existingCustomers);
+  const newCustomer = summarizeCustomerFromLoans({
+    id: nextId,
+    officialName: cleanName.slice(0, 120),
+    whatsapp: normalizedWa.slice(0, 32),
+    status: 'Aktif',
+    loans: [],
+  });
+
+  return {
+    ok: true,
+    customer: newCustomer,
+    password: resolvedPassword,
+  };
+}
+
+export function ensureCustomerDefaultPassword(
+  customer: Pick<CustomerRegistryItem, 'id' | 'whatsapp'>,
+  customerPasswords: Record<string, string>
+): Record<string, string> {
+  if (customerPasswords[customer.id]) {
+    return customerPasswords;
+  }
+  const normalized = normalizePhoneDigits(customer.whatsapp) || customer.whatsapp.trim();
+  return {
+    ...customerPasswords,
+    [customer.id]: normalized,
+  };
+}
+
 export function applyLoanPayment(
   customer: CustomerRegistryItem,
   loanId: string,

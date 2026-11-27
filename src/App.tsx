@@ -29,9 +29,17 @@ import {
   applyLoanPayment,
   buildLoanItem,
   buildTransactionsCsv,
+  ensureCustomerDefaultPassword,
   formatRupiah,
+  normalizePhoneDigits,
+  registerNewCustomerAccount,
   summarizeCustomerFromLoans,
 } from './utils/finance';
+import {
+  detectIOSBrowser,
+  detectStandaloneMode,
+  type BeforeInstallPromptEvent,
+} from './utils/pwa';
 import {
   AVATAR_KEY,
   DISPLAY_NAME_KEY,
@@ -67,8 +75,17 @@ import {
   subscribeFirestoreCustomers,
   subscribeFirestoreSavings,
   updateFirebasePassword,
+  updateUserProfileInFirestore,
   updateUserSoundPreferenceInFirestore,
 } from './lib/auth';
+import {
+  enqueueCloudSyncTask,
+  ensureConversationDocInFirestore,
+  flushCloudSyncQueue,
+  loadCloudSyncQueue,
+  saveTransactionDocToFirestore,
+  type CloudSyncTask,
+} from './lib/cloudSync';
 import {
   loadOlderConversationMessages,
   markConversationMessagesRead,
@@ -86,6 +103,7 @@ import {
   subscribeFirestoreTransactions,
 } from './lib/transactions';
 import {
+  createNotificationDoc,
   loadSoundEnabledPref,
   markAllUserNotificationsRead,
   markNotificationAsRead,
@@ -317,6 +335,26 @@ function AppInner() {
   const prevUnreadCountsRef = useRef<Record<string, UnreadChatPair>>({});
   const initialConvLoadDoneRef = useRef<boolean>(false);
 
+  // PWA Smart Auto Install States
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return (
+      (window as unknown as { __ozfDeferredPrompt?: BeforeInstallPromptEvent | null })
+        .__ozfDeferredPrompt ?? null
+    );
+  });
+  const [isPwaInstalled, setIsPwaInstalled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const installedFlag = Boolean(
+      (window as unknown as { __ozfAppInstalled?: boolean }).__ozfAppInstalled
+    );
+    return installedFlag || detectStandaloneMode();
+  });
+  const [isIOSDevice] = useState<boolean>(() => detectIOSBrowser());
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(
+    () => loadCloudSyncQueue().length
+  );
+
   const [swipeIndicator, setSwipeIndicator] = useState<'left' | 'right' | null>(null);
   const lastHomeBackTimeRef = useRef<number>(0);
 
@@ -329,6 +367,22 @@ function AppInner() {
       setToastMsg(null);
     }, 3200);
   }, []);
+
+  const syncOrEnqueue = useCallback(
+    async (task: CloudSyncTask, directWrite?: () => Promise<void>) => {
+      if (firebaseUser && firebaseUser.emailVerified && directWrite) {
+        try {
+          await directWrite();
+          return;
+        } catch {
+          // Fall back to offline sync queue so mutations never get lost
+        }
+      }
+      const count = enqueueCloudSyncTask(task);
+      setPendingSyncCount(count);
+    },
+    [firebaseUser]
+  );
 
   // Sync theme to document root
   useEffect(() => {
@@ -365,36 +419,101 @@ function AppInner() {
     void registerFcmServiceWorker();
   }, []);
 
-  // Sync local fallback persistence when running without live Firebase overwrite
+  // PWA beforeinstallprompt & appinstalled lifecycle
   useEffect(() => {
-    if (!firebaseUser) {
-      saveLocalJson(LOCAL_CUSTOMERS_KEY, customers);
+    const win = window as unknown as {
+      __ozfDeferredPrompt?: BeforeInstallPromptEvent | null;
+      __ozfAppInstalled?: boolean;
+    };
+
+    if (win.__ozfDeferredPrompt) {
+      setDeferredPrompt(win.__ozfDeferredPrompt);
     }
-  }, [customers, firebaseUser]);
+    if (win.__ozfAppInstalled || detectStandaloneMode()) {
+      setIsPwaInstalled(true);
+    }
+
+    const navAny = window.navigator as Navigator & {
+      getInstalledRelatedApps?: () => Promise<Array<{ platform?: string; url?: string }>>;
+    };
+    if (typeof navAny.getInstalledRelatedApps === 'function') {
+      void navAny
+        .getInstalledRelatedApps()
+        .then((apps) => {
+          if (Array.isArray(apps) && apps.length > 0) {
+            setIsPwaInstalled(true);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    const onBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      const promptEvent = e as BeforeInstallPromptEvent;
+      win.__ozfDeferredPrompt = promptEvent;
+      setDeferredPrompt(promptEvent);
+    };
+
+    const onEarlyPromptCaptured = () => {
+      if (win.__ozfDeferredPrompt) {
+        setDeferredPrompt(win.__ozfDeferredPrompt);
+      }
+    };
+
+    const onAppInstalled = () => {
+      win.__ozfDeferredPrompt = null;
+      win.__ozfAppInstalled = true;
+      setDeferredPrompt(null);
+      setIsPwaInstalled(true);
+      showToast('OZdigiFinance berhasil dipasang ke perangkat Anda!');
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('ozf:beforeinstallprompt', onEarlyPromptCaptured);
+    window.addEventListener('appinstalled', onAppInstalled);
+    window.addEventListener('ozf:appinstalled', onAppInstalled);
+
+    const mql =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(display-mode: standalone)')
+        : null;
+    const onDisplayModeChange = (ev: MediaQueryListEvent) => {
+      if (ev.matches) {
+        setIsPwaInstalled(true);
+        setDeferredPrompt(null);
+      }
+    };
+    mql?.addEventListener?.('change', onDisplayModeChange);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('ozf:beforeinstallprompt', onEarlyPromptCaptured);
+      window.removeEventListener('appinstalled', onAppInstalled);
+      window.removeEventListener('ozf:appinstalled', onAppInstalled);
+      mql?.removeEventListener?.('change', onDisplayModeChange);
+    };
+  }, [showToast]);
+
+  // Persist local mirror cache so offline sessions & pre-sync state survive reloads
+  useEffect(() => {
+    saveLocalJson(LOCAL_CUSTOMERS_KEY, customers);
+  }, [customers]);
 
   useEffect(() => {
-    if (!firebaseUser) {
-      saveLocalJson(LOCAL_TRANSACTIONS_KEY, transactions);
-    }
-  }, [transactions, firebaseUser]);
+    saveLocalJson(LOCAL_TRANSACTIONS_KEY, transactions);
+  }, [transactions]);
 
   useEffect(() => {
-    if (!firebaseUser) {
-      saveLocalJson(LOCAL_CHATS_KEY, chatsByCustomer);
-    }
-  }, [chatsByCustomer, firebaseUser]);
+    saveLocalJson(LOCAL_CHATS_KEY, chatsByCustomer);
+  }, [chatsByCustomer]);
 
   useEffect(() => {
-    if (!firebaseUser) {
-      saveLocalJson(LOCAL_UNREAD_CHAT_KEY, unreadChatMap);
-    }
-  }, [unreadChatMap, firebaseUser]);
+    saveLocalJson(LOCAL_UNREAD_CHAT_KEY, unreadChatMap);
+  }, [unreadChatMap]);
 
   useEffect(() => {
-    if (!firebaseUser) {
-      saveLocalJson(LOCAL_SAVINGS_KEY, savingsAccounts);
-    }
-  }, [savingsAccounts, firebaseUser]);
+    saveLocalJson(LOCAL_SAVINGS_KEY, savingsAccounts);
+  }, [savingsAccounts]);
 
   useEffect(() => {
     saveLocalJson(LOCAL_BILLS_KEY, pendingBills);
@@ -499,6 +618,27 @@ function AppInner() {
 
     return () => unsub();
   }, []);
+
+  // Automatic Cloud Sync Queue Flusher when Firebase Auth is active or connection returns
+  useEffect(() => {
+    if (!firebaseUser || !firebaseRole || !firebaseUser.emailVerified) return;
+
+    const runFlush = () => {
+      void flushCloudSyncQueue({
+        role: firebaseRole,
+        uid: firebaseUser.uid,
+      }).then((res) => {
+        setPendingSyncCount(res.remaining);
+        if (res.synced > 0) {
+          showToast(`${res.synced} data tersinkronisasi otomatis ke Cloud Firebase!`);
+        }
+      });
+    };
+
+    runFlush();
+    window.addEventListener('online', runFlush);
+    return () => window.removeEventListener('online', runFlush);
+  }, [firebaseRole, firebaseUser, showToast]);
 
   // Firestore Real-time Subscriptions (Admin & Customer scoped)
   useEffect(() => {
@@ -708,6 +848,10 @@ function AppInner() {
         handleDeepTarget({ conversationId: convParam || activeCustomer.id });
       } else if (openParam === 'transaction' || txParam) {
         handleDeepTarget({ transactionId: txParam || 'tx' });
+      } else if (openParam === 'register') {
+        setActiveModal({ type: 'auth', mode: 'register' });
+      } else if (openParam === 'login') {
+        setActiveModal({ type: 'auth', mode: 'login' });
       }
     } catch {
       // Ignore query parse error
@@ -932,11 +1076,28 @@ function AppInner() {
       const user = await signInWithFirebaseGoogle();
       setFirebaseConnected(true);
       const isEmailAdmin = isTrustedAdminEmail(user.email, user.emailVerified);
+      const resolvedRole: 'admin' | 'customer' = isEmailAdmin ? 'admin' : 'customer';
       if (isEmailAdmin) {
         await seedFirestoreIfEmpty(user.uid);
       } else if (currentView === 'customer') {
         await linkCustomerUidByWhatsapp(customers, activeCustomer.whatsapp, user.uid);
+        if (activeCustomer.loans.length === 0) {
+          await saveCustomerToFirestore(activeCustomer, user.uid).catch(() => undefined);
+          await ensureConversationDocInFirestore({
+            customerId: activeCustomer.id,
+            customerUid: user.uid,
+            customerName: activeCustomer.officialName,
+            customerWhatsapp: activeCustomer.whatsapp,
+            adminId: 'ADMIN',
+          }).catch(() => undefined);
+        }
+        const linkedSavings = savingsAccounts.find((a) => a.id === activeCustomer.id);
+        if (linkedSavings) {
+          await saveSavingsToFirestore(linkedSavings, user.uid).catch(() => undefined);
+        }
       }
+      const syncRes = await flushCloudSyncQueue({ role: resolvedRole, uid: user.uid });
+      setPendingSyncCount(syncRes.remaining);
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         const res = await requestAndRegisterPushToken({
           uid: user.uid,
@@ -946,7 +1107,11 @@ function AppInner() {
         });
         setPushStatus(res);
       }
-      showToast(`Akun Firebase terhubung: ${user.email || user.uid}`);
+      showToast(
+        syncRes.synced > 0
+          ? `Akun Firebase terhubung & ${syncRes.synced} data tersinkronisasi!`
+          : `Akun Firebase terhubung: ${user.email || user.uid}`
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('auth/unauthorized-domain')) {
@@ -959,7 +1124,14 @@ function AppInner() {
         showToast(msg || 'Gagal menautkan akun Google Firebase.');
       }
     }
-  }, [activeCustomer.id, activeCustomer.whatsapp, currentView, customers, showToast, soundEnabled]);
+  }, [
+    activeCustomer,
+    currentView,
+    customers,
+    savingsAccounts,
+    showToast,
+    soundEnabled,
+  ]);
 
   // Navigation & Auth handlers
   const handleLogin = useCallback(
@@ -1039,12 +1211,57 @@ function AppInner() {
         const role: 'admin' | 'customer' = isEmailAdmin && roleTab === 'admin' ? 'admin' : 'customer';
         if (role === 'admin') {
           await seedFirestoreIfEmpty(user.uid);
-          handleLogin('admin', 'ADM-001', user.displayName || 'Admin OZdigiFinance', user.email || ADMIN_EMAIL);
+          const syncRes = await flushCloudSyncQueue({ role: 'admin', uid: user.uid });
+          setPendingSyncCount(syncRes.remaining);
+          handleLogin(
+            'admin',
+            'ADM-001',
+            user.displayName || 'Admin OZdigiFinance',
+            user.email || ADMIN_EMAIL
+          );
         } else {
-          const matched =
-            customers.find(
-              (c) => (c as CustomerRegistryItem & { ownerUid?: string }).ownerUid === user.uid
-            ) ?? customers[0];
+          let matched = customers.find(
+            (c) => (c as CustomerRegistryItem & { ownerUid?: string }).ownerUid === user.uid
+          );
+          if (!matched) {
+            const reg = registerNewCustomerAccount({
+              existingCustomers: customers,
+              officialName:
+                user.displayName || user.email?.split('@')[0] || 'Nasabah OZdigiFinance',
+              whatsapp: '0800' + String(Date.now()).slice(-8),
+            });
+            if (reg.ok) {
+              matched = reg.customer;
+              const initialSavings: SavingsAccount = {
+                id: matched.id,
+                officialName: matched.officialName,
+                whatsapp: matched.whatsapp,
+                program: defaultSavingsFreq,
+                routine: 'Rp 0 / setoran',
+                balance: 0,
+                lastDate: '26 Nov 2026',
+                status: 'Aktif',
+              };
+              setCustomers((prev) => [...prev, matched!]);
+              setSavingsAccounts((prev) => [...prev, initialSavings]);
+              setCustomerPasswords((prev) => {
+                const next = { ...prev, [matched!.id]: reg.password };
+                saveCustomerPasswords(next);
+                return next;
+              });
+              await saveCustomerToFirestore(matched, user.uid).catch(() => undefined);
+              await saveSavingsToFirestore(initialSavings, user.uid).catch(() => undefined);
+              await ensureConversationDocInFirestore({
+                customerId: matched.id,
+                customerUid: user.uid,
+                customerName: matched.officialName,
+                customerWhatsapp: matched.whatsapp,
+                adminId: 'ADMIN',
+              }).catch(() => undefined);
+            } else {
+              matched = customers[0];
+            }
+          }
           handleLogin(
             'customer',
             matched.id,
@@ -1061,7 +1278,97 @@ function AppInner() {
         return { ok: false, error: msg };
       }
     },
-    [customers, handleLogin]
+    [customers, defaultSavingsFreq, handleLogin]
+  );
+
+  const handleRegisterCustomer = useCallback(
+    (
+      officialName: string,
+      whatsapp: string,
+      password: string
+    ): { ok: true } | { ok: false; error: string } => {
+      const reg = registerNewCustomerAccount({
+        existingCustomers: customers,
+        officialName,
+        whatsapp,
+        password,
+      });
+      if (!reg.ok) return reg;
+
+      const newCustomer = reg.customer;
+      const ownerUid = firebaseUser?.emailVerified ? firebaseUser.uid : '';
+      const initialSavings: SavingsAccount = {
+        id: newCustomer.id,
+        officialName: newCustomer.officialName,
+        whatsapp: newCustomer.whatsapp,
+        program: defaultSavingsFreq,
+        routine: 'Rp 0 / setoran',
+        balance: 0,
+        lastDate: '26 Nov 2026',
+        status: 'Aktif',
+      };
+
+      setCustomers((prev) => [...prev, newCustomer]);
+      setSavingsAccounts((prev) => [...prev, initialSavings]);
+      setChatsByCustomer((prev) => ({
+        ...prev,
+        [newCustomer.id]: prev[newCustomer.id] ?? [],
+      }));
+      setCustomerPasswords((prev) => {
+        const next = { ...prev, [newCustomer.id]: reg.password };
+        saveCustomerPasswords(next);
+        return next;
+      });
+
+      void (async () => {
+        await syncOrEnqueue(
+          { kind: 'upsertCustomer', customer: newCustomer, ownerUid },
+          () => saveCustomerToFirestore(newCustomer, ownerUid)
+        );
+        await syncOrEnqueue(
+          { kind: 'upsertSavings', account: initialSavings, ownerUid },
+          () => saveSavingsToFirestore(initialSavings, ownerUid)
+        );
+        await syncOrEnqueue(
+          {
+            kind: 'ensureConversation',
+            customerId: newCustomer.id,
+            customerUid: ownerUid,
+            customerName: newCustomer.officialName,
+            customerWhatsapp: newCustomer.whatsapp,
+            adminId: 'ADMIN',
+          },
+          () =>
+            ensureConversationDocInFirestore({
+              customerId: newCustomer.id,
+              customerUid: ownerUid,
+              customerName: newCustomer.officialName,
+              customerWhatsapp: newCustomer.whatsapp,
+              adminId: 'ADMIN',
+            })
+        );
+      })();
+
+      const session = createSessionToken(
+        'customer',
+        newCustomer.id,
+        newCustomer.officialName,
+        newCustomer.whatsapp
+      );
+      persistSession(session);
+      setIsAdminSession(false);
+      setActiveModal(null);
+      setActiveCustomerId(newCustomer.id);
+      setDisplayName(newCustomer.officialName);
+      setCustPage('c-beranda');
+      setCurrentView('customer');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      showToast(
+        `Pendaftaran berhasil! Selamat datang, ${newCustomer.officialName} (${newCustomer.id}).`
+      );
+      return { ok: true };
+    },
+    [customers, defaultSavingsFreq, firebaseUser, showToast, syncOrEnqueue]
   );
 
   const handleSwitchRole = useCallback(
@@ -1278,25 +1585,32 @@ function AppInner() {
   const handleChangeSavingsFreq = useCallback(
     (freq: SavingsFrequency) => {
       setDefaultSavingsFreq(freq);
+      const ownerUid =
+        (activeCustomer as CustomerRegistryItem & { ownerUid?: string }).ownerUid ||
+        (firebaseUser?.emailVerified ? firebaseUser.uid : '');
       setSavingsAccounts((prev) =>
         prev.map((acc) => {
           if (acc.id !== activeCustomer.id) return acc;
           const updated = { ...acc, program: freq };
-          if (firebaseUser && firebaseRole === 'admin') {
-            void saveSavingsToFirestore(updated, firebaseUser.uid).catch(() => undefined);
-          }
+          void syncOrEnqueue(
+            { kind: 'upsertSavings', account: updated, ownerUid },
+            () => saveSavingsToFirestore(updated, ownerUid)
+          );
           return updated;
         })
       );
       showToast('Opsi tabungan diubah menjadi: ' + freq);
     },
-    [activeCustomer.id, firebaseRole, firebaseUser, showToast]
+    [activeCustomer, firebaseUser, showToast, syncOrEnqueue]
   );
 
   const handleCustomerDeposit = useCallback(
     (amount: number) => {
       const program = activeCustomerSavings?.program ?? defaultSavingsFreq;
-      let updatedAcc: SavingsAccount = {
+      const ownerUid =
+        (activeCustomer as CustomerRegistryItem & { ownerUid?: string }).ownerUid ||
+        (firebaseUser?.emailVerified ? firebaseUser.uid : '');
+      const updatedAcc: SavingsAccount = {
         id: activeCustomer.id,
         officialName: activeCustomer.officialName,
         whatsapp: activeCustomer.whatsapp,
@@ -1313,9 +1627,6 @@ function AppInner() {
         }
         return [...prev, updatedAcc];
       });
-      if (firebaseUser && firebaseRole === 'admin') {
-        void saveSavingsToFirestore(updatedAcc, firebaseUser.uid).catch(() => undefined);
-      }
       setMonthlySavingsInflow((v) => v + amount);
       setSavingsMutations((prev) => [
         {
@@ -1329,19 +1640,42 @@ function AppInner() {
         },
         ...prev,
       ]);
-      setTransactions((prev) => [
+
+      const savTx: TransactionRecord = {
+        id: 'SAV-20261126-' + String(Math.floor(100 + Math.random() * 899)),
+        custId: activeCustomer.id,
+        officialName: activeCustomer.officialName,
+        description: 'Setoran Tabungan Digital',
+        date: '26 Nov 2026',
+        amount,
+        status: 'Berhasil',
+        scope: 'savings',
+      };
+      setTransactions((prev) => [savTx, ...prev]);
+
+      void syncOrEnqueue(
+        { kind: 'upsertSavings', account: updatedAcc, ownerUid },
+        () => saveSavingsToFirestore(updatedAcc, ownerUid)
+      );
+      void syncOrEnqueue(
         {
-          id: 'SAV-20261126-' + String(Math.floor(100 + Math.random() * 899)),
-          custId: activeCustomer.id,
-          officialName: activeCustomer.officialName,
-          description: 'Setoran Tabungan Digital',
-          date: '26 Nov 2026',
-          amount,
-          status: 'Berhasil',
-          scope: 'savings',
+          kind: 'upsertTransaction',
+          tx: savTx,
+          customerUid: ownerUid,
+          adminId: 'ADMIN',
+          sisaTagihan: activeCustomer.remainingDebt,
+          jenisTransaksi: 'savings',
         },
-        ...prev,
-      ]);
+        () =>
+          saveTransactionDocToFirestore({
+            tx: savTx,
+            customerUid: ownerUid,
+            adminId: 'ADMIN',
+            sisaTagihan: activeCustomer.remainingDebt,
+            jenisTransaksi: 'savings',
+          })
+      );
+
       pushCustomerNotification({
         custId: activeCustomer.id,
         category: 'sav',
@@ -1354,34 +1688,33 @@ function AppInner() {
       showToast(`Setoran tabungan ${formatRupiah(amount)} berhasil ditambahkan!`);
     },
     [
-      activeCustomer.id,
-      activeCustomer.officialName,
-      activeCustomer.whatsapp,
+      activeCustomer,
       activeCustomerSavings,
       defaultSavingsFreq,
-      firebaseRole,
       firebaseUser,
       pushCustomerNotification,
       showToast,
+      syncOrEnqueue,
     ]
   );
 
   const handleSubmitPayProof = useCallback(
     (billLabel: string, amount: number) => {
       const txId = 'TRX-20261126-' + String(Math.floor(100 + Math.random() * 899));
-      setTransactions((prev) => [
-        {
-          id: txId,
-          custId: activeCustomer.id,
-          officialName: activeCustomer.officialName,
-          description: billLabel,
-          date: '26 Nov 2026',
-          amount,
-          status: 'Menunggu Verifikasi',
-          scope: 'loan',
-        },
-        ...prev,
-      ]);
+      const ownerUid =
+        (activeCustomer as CustomerRegistryItem & { ownerUid?: string }).ownerUid ||
+        (firebaseUser?.emailVerified ? firebaseUser.uid : '');
+      const proofTx: TransactionRecord = {
+        id: txId,
+        custId: activeCustomer.id,
+        officialName: activeCustomer.officialName,
+        description: billLabel,
+        date: '26 Nov 2026',
+        amount,
+        status: 'Menunggu Verifikasi',
+        scope: 'loan',
+      };
+      setTransactions((prev) => [proofTx, ...prev]);
       setPendingBills((prev) => [
         {
           id: 'BILL-' + Date.now(),
@@ -1396,11 +1729,31 @@ function AppInner() {
         },
         ...prev,
       ]);
+
+      void syncOrEnqueue(
+        {
+          kind: 'upsertTransaction',
+          tx: proofTx,
+          customerUid: ownerUid,
+          adminId: 'ADMIN',
+          sisaTagihan: activeCustomer.remainingDebt,
+          jenisTransaksi: 'payment_proof',
+        },
+        () =>
+          saveTransactionDocToFirestore({
+            tx: proofTx,
+            customerUid: ownerUid,
+            adminId: 'ADMIN',
+            sisaTagihan: activeCustomer.remainingDebt,
+            jenisTransaksi: 'payment_proof',
+          })
+      );
+
       setAdminBellCount((c) => c + 1);
       showToast('Bukti pembayaran terkirim! Menunggu verifikasi Admin.');
       setCustPage('c-beranda');
     },
-    [activeCustomer.id, activeCustomer.officialName, activeCustomer.whatsapp, showToast]
+    [activeCustomer, firebaseUser, showToast, syncOrEnqueue]
   );
 
   // Two-Way Real-Time Chat: Customer -> Admin
@@ -1413,9 +1766,12 @@ function AppInner() {
       });
 
       const conv = firestoreConversations.find((c) => c.conversationId === custId);
+      const activeOwnerUid =
+        (activeCustomer as CustomerRegistryItem & { ownerUid?: string }).ownerUid || '';
       const canUseFirestore =
         Boolean(firebaseUser?.emailVerified) &&
-        Boolean(conv?.customerUid && conv.customerUid === firebaseUser?.uid);
+        (Boolean(conv?.customerUid && conv.customerUid === firebaseUser?.uid) ||
+          activeOwnerUid === firebaseUser?.uid);
 
       if (canUseFirestore && firebaseUser) {
         void sendFirestoreChatMessage({
@@ -1466,9 +1822,7 @@ function AppInner() {
       setAdminBellCount((c) => c + 1);
     },
     [
-      activeCustomer.id,
-      activeCustomer.officialName,
-      activeCustomer.whatsapp,
+      activeCustomer,
       firebaseUser,
       firestoreConversations,
       showToast,
@@ -1556,57 +1910,103 @@ function AppInner() {
       const target = pendingBills.find((b) => b.id === billId);
       if (!target || target.verified) return;
 
+      const targetCust = customers.find((c) => c.id === target.custId);
+      const targetOwnerUid =
+        (targetCust as (CustomerRegistryItem & { ownerUid?: string }) | undefined)?.ownerUid || '';
+      const txId = 'TRX-20261126-VER-' + String(Math.floor(10 + Math.random() * 89));
+      const newTx: TransactionRecord = {
+        id: txId,
+        custId: target.custId,
+        officialName: target.officialName,
+        description: `Pembayaran ${target.billTitle}`,
+        date: '26 Nov 2026',
+        amount: target.amount,
+        status: 'Terverifikasi',
+        scope: 'loan',
+      };
+
       setPendingBills((prev) =>
         prev.map((b) => (b.id === billId ? { ...b, verified: true } : b))
       );
 
-      setTransactions((prev) => [
+      setTransactions((prev) => [newTx, ...prev]);
+
+      void syncOrEnqueue(
         {
-          id: 'TRX-20261126-VER-' + String(Math.floor(10 + Math.random() * 89)),
-          custId: target.custId,
-          officialName: target.officialName,
-          description: `Pembayaran ${target.billTitle}`,
-          date: '26 Nov 2026',
-          amount: target.amount,
-          status: 'Terverifikasi',
-          scope: 'loan',
+          kind: 'upsertTransaction',
+          tx: newTx,
+          customerUid: targetOwnerUid,
+          adminId: firebaseUser?.uid || 'ADMIN',
+          sisaTagihan: targetCust?.remainingDebt ?? 0,
+          jenisTransaksi: 'loan',
         },
-        ...prev,
-      ]);
+        firebaseRole === 'admin'
+          ? () =>
+              saveTransactionDocToFirestore({
+                tx: newTx,
+                customerUid: targetOwnerUid,
+                adminId: firebaseUser?.uid || 'ADMIN',
+                sisaTagihan: targetCust?.remainingDebt ?? 0,
+                jenisTransaksi: 'loan',
+              })
+          : undefined
+      );
+
+      if (firebaseUser?.emailVerified && firebaseRole === 'admin' && targetOwnerUid) {
+        void createNotificationDoc({
+          notificationId: `NTF-${txId}`,
+          recipientId: target.custId,
+          recipientUid: targetOwnerUid,
+          senderId: firebaseUser.uid,
+          title: `Pembayaran ${target.billTitle} Terverifikasi`,
+          body: `Pembayaran ${target.billTitle} sebesar ${formatRupiah(target.amount)} atas nama ${target.officialName} (${target.custId}) telah diverifikasi oleh Admin OZdigiFinance.`,
+          type: 'TRANSACTION_ALERT',
+          transactionId: txId,
+        }).catch(() => undefined);
+      }
 
       pushCustomerNotification({
         custId: target.custId,
         category: 'pay',
         title: `Pembayaran ${target.billTitle} Terverifikasi`,
         desc: `Pembayaran ${target.billTitle} sebesar ${formatRupiah(target.amount)} atas nama ${target.officialName} (${target.custId}) telah diverifikasi oleh Admin OZdigiFinance.`,
+        transactionId: txId,
         playSound: true,
         soundCategory: 'TRANSACTION_ALERT',
       });
 
       showToast(`Pembayaran ${target.officialName} diverifikasi & notifikasi suara dikirim!`);
     },
-    [pendingBills, pushCustomerNotification, showToast]
+    [
+      customers,
+      firebaseRole,
+      firebaseUser,
+      pendingBills,
+      pushCustomerNotification,
+      showToast,
+      syncOrEnqueue,
+    ]
   );
 
   const handleAdminPaySubmit = useCallback(
     (custId: string, officialName: string, desc: string, amount: number) => {
       const txId = 'TRX-20261126-ADM-' + String(Math.floor(10 + Math.random() * 89));
       const targetCust = customers.find((c) => c.id === custId);
+      const targetOwnerUid =
+        (targetCust as (CustomerRegistryItem & { ownerUid?: string }) | undefined)?.ownerUid || '';
       const tanggal = '26 Nov 2026';
 
-      setTransactions((prev) => [
-        {
-          id: txId,
-          custId,
-          officialName,
-          description: `Pembayaran ${desc}`,
-          date: tanggal,
-          amount,
-          status: 'Terverifikasi',
-          scope: 'loan',
-        },
-        ...prev,
-      ]);
+      const newTx: TransactionRecord = {
+        id: txId,
+        custId,
+        officialName,
+        description: `Pembayaran ${desc}`,
+        date: tanggal,
+        amount,
+        status: 'Terverifikasi',
+        scope: 'loan',
+      };
+      setTransactions((prev) => [newTx, ...prev]);
 
       const sysText = formatPaymentSystemMessage({
         customerName: officialName,
@@ -1642,6 +2042,41 @@ function AppInner() {
         },
       }));
 
+      void syncOrEnqueue(
+        {
+          kind: 'upsertTransaction',
+          tx: newTx,
+          customerUid: targetOwnerUid,
+          adminId: firebaseUser?.uid || 'ADMIN',
+          sisaTagihan: targetCust?.remainingDebt ?? 0,
+          jenisTransaksi: 'loan',
+        },
+        firebaseRole === 'admin'
+          ? () =>
+              saveTransactionDocToFirestore({
+                tx: newTx,
+                customerUid: targetOwnerUid,
+                adminId: firebaseUser?.uid || 'ADMIN',
+                sisaTagihan: targetCust?.remainingDebt ?? 0,
+                jenisTransaksi: 'loan',
+              })
+          : undefined
+      );
+
+      if (firebaseUser?.emailVerified && firebaseRole === 'admin') {
+        void sendFirestoreChatMessage({
+          conversationId: custId,
+          customerId: custId,
+          customerUid: targetOwnerUid,
+          customerName: officialName,
+          customerWhatsapp: targetCust?.whatsapp || '',
+          senderUid: firebaseUser.uid,
+          senderRole: 'admin',
+          senderName: 'Admin OZdigiFinance',
+          text: sysText,
+        }).catch(() => undefined);
+      }
+
       pushCustomerNotification({
         id: `NTF-${txId}`,
         custId,
@@ -1657,7 +2092,14 @@ function AppInner() {
       setActiveModal(null);
       showToast(`Pembayaran ${officialName} diverifikasi & pesan sistem dikirim!`);
     },
-    [customers, pushCustomerNotification, showToast]
+    [
+      customers,
+      firebaseRole,
+      firebaseUser,
+      pushCustomerNotification,
+      showToast,
+      syncOrEnqueue,
+    ]
   );
 
   const handleAdminSavingsSubmit = useCallback(
@@ -1672,6 +2114,10 @@ function AppInner() {
         return;
       }
 
+      const targetCust = customers.find((c) => c.id === custId);
+      const targetOwnerUid =
+        (targetCust as (CustomerRegistryItem & { ownerUid?: string }) | undefined)?.ownerUid || '';
+
       const nextBalance =
         txType === 'setor' ? targetAcc.balance + amount : targetAcc.balance - amount;
       const updatedAcc: SavingsAccount = {
@@ -1683,9 +2129,6 @@ function AppInner() {
       setSavingsAccounts((prev) =>
         prev.map((acc) => (acc.id !== custId ? acc : updatedAcc))
       );
-      if (firebaseUser && firebaseRole === 'admin') {
-        void saveSavingsToFirestore(updatedAcc).catch(() => undefined);
-      }
 
       if (txType === 'setor') {
         setMonthlySavingsInflow((v) => v + amount);
@@ -1705,22 +2148,47 @@ function AppInner() {
         ...prev,
       ]);
 
-      setTransactions((prev) => [
+      const savTx: TransactionRecord = {
+        id: 'SAV-20261126-ADM-' + String(Math.floor(10 + Math.random() * 89)),
+        custId: targetAcc.id,
+        officialName: targetAcc.officialName,
+        description:
+          txType === 'setor'
+            ? 'Setoran Tabungan (Terverifikasi Admin)'
+            : 'Penarikan Saldo Tabungan',
+        date: '26 Nov 2026',
+        amount,
+        status: 'Terverifikasi',
+        scope: 'savings',
+      };
+      setTransactions((prev) => [savTx, ...prev]);
+
+      void syncOrEnqueue(
+        { kind: 'upsertSavings', account: updatedAcc, ownerUid: targetOwnerUid },
+        firebaseRole === 'admin'
+          ? () => saveSavingsToFirestore(updatedAcc, targetOwnerUid)
+          : undefined
+      );
+      void syncOrEnqueue(
         {
-          id: 'SAV-20261126-ADM-' + String(Math.floor(10 + Math.random() * 89)),
-          custId: targetAcc.id,
-          officialName: targetAcc.officialName,
-          description:
-            txType === 'setor'
-              ? 'Setoran Tabungan (Terverifikasi Admin)'
-              : 'Penarikan Saldo Tabungan',
-          date: '26 Nov 2026',
-          amount,
-          status: 'Terverifikasi',
-          scope: 'savings',
+          kind: 'upsertTransaction',
+          tx: savTx,
+          customerUid: targetOwnerUid,
+          adminId: firebaseUser?.uid || 'ADMIN',
+          sisaTagihan: targetCust?.remainingDebt ?? 0,
+          jenisTransaksi: 'savings',
         },
-        ...prev,
-      ]);
+        firebaseRole === 'admin'
+          ? () =>
+              saveTransactionDocToFirestore({
+                tx: savTx,
+                customerUid: targetOwnerUid,
+                adminId: firebaseUser?.uid || 'ADMIN',
+                sisaTagihan: targetCust?.remainingDebt ?? 0,
+                jenisTransaksi: 'savings',
+              })
+          : undefined
+      );
 
       pushCustomerNotification({
         custId: targetAcc.id,
@@ -1745,40 +2213,118 @@ function AppInner() {
         )} diverifikasi & notifikasi suara dikirim ke ${targetAcc.officialName}!`
       );
     },
-    [firebaseRole, firebaseUser, pushCustomerNotification, savingsAccounts, showToast]
+    [
+      customers,
+      firebaseRole,
+      firebaseUser,
+      pushCustomerNotification,
+      savingsAccounts,
+      showToast,
+      syncOrEnqueue,
+    ]
   );
 
   const handleSaveCustomer = useCallback(
     (savedCustomer: CustomerRegistryItem, isNew: boolean) => {
+      const normalizedWa = normalizePhoneDigits(savedCustomer.whatsapp);
+      const duplicateWa = customers.find(
+        (c) =>
+          c.id !== savedCustomer.id &&
+          normalizePhoneDigits(c.whatsapp) === normalizedWa &&
+          normalizedWa.length > 0
+      );
+      if (duplicateWa) {
+        showToast(
+          `Nomor WhatsApp ${savedCustomer.whatsapp} sudah digunakan oleh ${duplicateWa.officialName} (${duplicateWa.id}).`
+        );
+        return;
+      }
+
       if (isNew) {
         if (customers.some((c) => c.id === savedCustomer.id)) {
           showToast(`ID ${savedCustomer.id} sudah digunakan, gunakan ID lain.`);
           return;
         }
+        const defaultSavings: SavingsAccount = {
+          id: savedCustomer.id,
+          officialName: savedCustomer.officialName,
+          whatsapp: savedCustomer.whatsapp,
+          program: defaultSavingsFreq,
+          routine: 'Rp 0 / setoran',
+          balance: 0,
+          lastDate: '26 Nov 2026',
+          status: 'Aktif',
+        };
         setCustomers((prev) => [...prev, savedCustomer]);
-        if (firebaseUser && firebaseRole === 'admin') {
-          void saveCustomerToFirestore(savedCustomer).catch(() => undefined);
-        }
+        setSavingsAccounts((prev) =>
+          prev.some((a) => a.id === savedCustomer.id) ? prev : [...prev, defaultSavings]
+        );
+        setChatsByCustomer((prev) => ({
+          ...prev,
+          [savedCustomer.id]: prev[savedCustomer.id] ?? [],
+        }));
+        setCustomerPasswords((prev) => {
+          const next = ensureCustomerDefaultPassword(savedCustomer, prev);
+          saveCustomerPasswords(next);
+          return next;
+        });
+
+        void (async () => {
+          await syncOrEnqueue(
+            { kind: 'upsertCustomer', customer: savedCustomer },
+            firebaseRole === 'admin' ? () => saveCustomerToFirestore(savedCustomer) : undefined
+          );
+          await syncOrEnqueue(
+            { kind: 'upsertSavings', account: defaultSavings },
+            firebaseRole === 'admin' ? () => saveSavingsToFirestore(defaultSavings) : undefined
+          );
+          await syncOrEnqueue(
+            {
+              kind: 'ensureConversation',
+              customerId: savedCustomer.id,
+              customerUid: '',
+              customerName: savedCustomer.officialName,
+              customerWhatsapp: savedCustomer.whatsapp,
+              adminId: firebaseUser?.uid || 'ADMIN',
+            },
+            firebaseRole === 'admin'
+              ? () =>
+                  ensureConversationDocInFirestore({
+                    customerId: savedCustomer.id,
+                    customerUid: '',
+                    customerName: savedCustomer.officialName,
+                    customerWhatsapp: savedCustomer.whatsapp,
+                    adminId: firebaseUser?.uid || 'ADMIN',
+                  })
+              : undefined
+          );
+        })();
+
         showToast(
-          `Nasabah baru ${savedCustomer.officialName} (${savedCustomer.id}) berhasil ditambahkan.`
+          `Nasabah baru ${savedCustomer.officialName} (${savedCustomer.id}) berhasil ditambahkan & siap login dengan No. WhatsApp!`
         );
       } else {
         setCustomers((prev) =>
           prev.map((c) => (c.id === savedCustomer.id ? savedCustomer : c))
         );
-        if (firebaseUser && firebaseRole === 'admin') {
-          void saveCustomerToFirestore(savedCustomer).catch(() => undefined);
-        }
+        void syncOrEnqueue(
+          { kind: 'upsertCustomer', customer: savedCustomer },
+          firebaseRole === 'admin' ? () => saveCustomerToFirestore(savedCustomer) : undefined
+        );
         setSavingsAccounts((prev) =>
-          prev.map((acc) =>
-            acc.id === savedCustomer.id
-              ? {
-                  ...acc,
-                  officialName: savedCustomer.officialName,
-                  whatsapp: savedCustomer.whatsapp,
-                }
-              : acc
-          )
+          prev.map((acc) => {
+            if (acc.id !== savedCustomer.id) return acc;
+            const nextAcc = {
+              ...acc,
+              officialName: savedCustomer.officialName,
+              whatsapp: savedCustomer.whatsapp,
+            };
+            void syncOrEnqueue(
+              { kind: 'upsertSavings', account: nextAcc },
+              firebaseRole === 'admin' ? () => saveSavingsToFirestore(nextAcc) : undefined
+            );
+            return nextAcc;
+          })
         );
         setTransactions((prev) =>
           prev.map((tx) =>
@@ -1805,7 +2351,15 @@ function AppInner() {
       }
       setActiveModal(null);
     },
-    [activeCustomerId, customers, firebaseRole, firebaseUser, showToast]
+    [
+      activeCustomerId,
+      customers,
+      defaultSavingsFreq,
+      firebaseRole,
+      firebaseUser,
+      showToast,
+      syncOrEnqueue,
+    ]
   );
 
   const handleDeleteCustomer = useCallback(
@@ -1815,10 +2369,14 @@ function AppInner() {
       setCustomers(nextCustomers);
       setSavingsAccounts((prev) => prev.filter((acc) => acc.id !== custId));
       setPendingBills((prev) => prev.filter((b) => b.custId !== custId));
-      if (firebaseUser && firebaseRole === 'admin') {
-        void deleteCustomerFromFirestore(custId).catch(() => undefined);
-        void deleteSavingsFromFirestore(custId).catch(() => undefined);
-      }
+      void syncOrEnqueue(
+        { kind: 'deleteCustomer', custId },
+        firebaseRole === 'admin' ? () => deleteCustomerFromFirestore(custId) : undefined
+      );
+      void syncOrEnqueue(
+        { kind: 'deleteSavings', custId },
+        firebaseRole === 'admin' ? () => deleteSavingsFromFirestore(custId) : undefined
+      );
       if (activeCustomerId === custId && nextCustomers[0]) {
         setActiveCustomerId(nextCustomers[0].id);
         setDisplayName(nextCustomers[0].officialName);
@@ -1833,9 +2391,9 @@ function AppInner() {
       activeCustomerId,
       customers,
       firebaseRole,
-      firebaseUser,
       selectedAdminChatCustId,
       showToast,
+      syncOrEnqueue,
     ]
   );
 
@@ -1855,9 +2413,10 @@ function AppInner() {
       });
 
       setCustomers((prev) => prev.map((c) => (c.id === custId ? updatedCustomer : c)));
-      if (firebaseUser && firebaseRole === 'admin') {
-        void saveCustomerToFirestore(updatedCustomer).catch(() => undefined);
-      }
+      void syncOrEnqueue(
+        { kind: 'upsertCustomer', customer: updatedCustomer },
+        firebaseRole === 'admin' ? () => saveCustomerToFirestore(updatedCustomer) : undefined
+      );
 
       const existingAcc = savingsAccounts.find((acc) => acc.id === custId);
       const nextAcc: SavingsAccount = existingAcc
@@ -1884,9 +2443,10 @@ function AppInner() {
           ? prev.map((acc) => (acc.id === custId ? nextAcc : acc))
           : [...prev, nextAcc]
       );
-      if (firebaseUser && firebaseRole === 'admin') {
-        void saveSavingsToFirestore(nextAcc).catch(() => undefined);
-      }
+      void syncOrEnqueue(
+        { kind: 'upsertSavings', account: nextAcc },
+        firebaseRole === 'admin' ? () => saveSavingsToFirestore(nextAcc) : undefined
+      );
 
       if (amount > 0) {
         setMonthlySavingsInflow((v) => v + amount);
@@ -1907,26 +2467,47 @@ function AppInner() {
         ...prev,
       ]);
 
-      setTransactions((prev) => [
+      const convTx: TransactionRecord = {
+        id: 'SAV-CONV-' + String(Math.floor(100 + Math.random() * 899)),
+        custId: targetCust.id,
+        officialName: targetCust.officialName,
+        description: `Konversi Pinjaman (${sourceLabel}) ke Tabungan`,
+        date: '26 Nov 2026',
+        amount,
+        status: 'Terverifikasi',
+        scope: 'savings',
+      };
+      setTransactions((prev) => [convTx, ...prev]);
+
+      const targetOwnerUid =
+        (targetCust as CustomerRegistryItem & { ownerUid?: string }).ownerUid || '';
+      void syncOrEnqueue(
         {
-          id: 'SAV-CONV-' + String(Math.floor(100 + Math.random() * 899)),
-          custId: targetCust.id,
-          officialName: targetCust.officialName,
-          description: `Konversi Pinjaman (${sourceLabel}) ke Tabungan`,
-          date: '26 Nov 2026',
-          amount,
-          status: 'Terverifikasi',
-          scope: 'savings',
+          kind: 'upsertTransaction',
+          tx: convTx,
+          customerUid: targetOwnerUid,
+          adminId: firebaseUser?.uid || 'ADMIN',
+          sisaTagihan: updatedCustomer.remainingDebt,
+          jenisTransaksi: 'savings',
         },
-        ...prev,
-      ]);
+        firebaseRole === 'admin'
+          ? () =>
+              saveTransactionDocToFirestore({
+                tx: convTx,
+                customerUid: targetOwnerUid,
+                adminId: firebaseUser?.uid || 'ADMIN',
+                sisaTagihan: updatedCustomer.remainingDebt,
+                jenisTransaksi: 'savings',
+              })
+          : undefined
+      );
 
       setActiveModal(null);
       showToast(
         `${sourceLabel} milik ${targetCust.officialName} berhasil diubah menjadi Tabungan (${program}).`
       );
     },
-    [customers, firebaseRole, firebaseUser, savingsAccounts, showToast]
+    [customers, firebaseRole, firebaseUser, savingsAccounts, showToast, syncOrEnqueue]
   );
 
   const handleConvertSavingsToLoan = useCallback(
@@ -1973,31 +2554,57 @@ function AppInner() {
       );
       setSavingsAccounts((prev) => prev.filter((a) => a.id !== custId));
 
-      if (firebaseUser && firebaseRole === 'admin') {
-        void saveCustomerToFirestore(updatedCustomer).catch(() => undefined);
-        void deleteSavingsFromFirestore(custId).catch(() => undefined);
-      }
+      void syncOrEnqueue(
+        { kind: 'upsertCustomer', customer: updatedCustomer },
+        firebaseRole === 'admin' ? () => saveCustomerToFirestore(updatedCustomer) : undefined
+      );
+      void syncOrEnqueue(
+        { kind: 'deleteSavings', custId },
+        firebaseRole === 'admin' ? () => deleteSavingsFromFirestore(custId) : undefined
+      );
 
-      setTransactions((prev) => [
+      const convTx: TransactionRecord = {
+        id: 'TRX-CONV-' + String(Math.floor(100 + Math.random() * 899)),
+        custId: targetAcc.id,
+        officialName: targetAcc.officialName,
+        description: `Konversi Tabungan menjadi Pinjaman (${productName})`,
+        date: '26 Nov 2026',
+        amount: monthlyInstallment * totalInstallments,
+        status: 'Terverifikasi',
+        scope: 'loan',
+      };
+      setTransactions((prev) => [convTx, ...prev]);
+
+      const targetOwnerUid =
+        (existingCust as (CustomerRegistryItem & { ownerUid?: string }) | undefined)?.ownerUid ||
+        '';
+      void syncOrEnqueue(
         {
-          id: 'TRX-CONV-' + String(Math.floor(100 + Math.random() * 899)),
-          custId: targetAcc.id,
-          officialName: targetAcc.officialName,
-          description: `Konversi Tabungan menjadi Pinjaman (${productName})`,
-          date: '26 Nov 2026',
-          amount: monthlyInstallment * totalInstallments,
-          status: 'Terverifikasi',
-          scope: 'loan',
+          kind: 'upsertTransaction',
+          tx: convTx,
+          customerUid: targetOwnerUid,
+          adminId: firebaseUser?.uid || 'ADMIN',
+          sisaTagihan: updatedCustomer.remainingDebt,
+          jenisTransaksi: 'loan',
         },
-        ...prev,
-      ]);
+        firebaseRole === 'admin'
+          ? () =>
+              saveTransactionDocToFirestore({
+                tx: convTx,
+                customerUid: targetOwnerUid,
+                adminId: firebaseUser?.uid || 'ADMIN',
+                sisaTagihan: updatedCustomer.remainingDebt,
+                jenisTransaksi: 'loan',
+              })
+          : undefined
+      );
 
       setActiveModal(null);
       showToast(
         `Tabungan ${targetAcc.officialName} berhasil diubah menjadi Pinjaman (${productName}).`
       );
     },
-    [customers, firebaseRole, firebaseUser, savingsAccounts, showToast]
+    [customers, firebaseRole, firebaseUser, savingsAccounts, showToast, syncOrEnqueue]
   );
 
   const handleDownloadCsv = useCallback(() => {
@@ -2235,6 +2842,12 @@ function AppInner() {
         } catch {
           // Ignore
         }
+        if (firebaseUser?.emailVerified) {
+          void updateUserProfileInFirestore({
+            uid: firebaseUser.uid,
+            nama: newName,
+          });
+        }
       }
       if (avatarDataUrl) {
         setAvatarUrl(avatarDataUrl);
@@ -2453,6 +3066,7 @@ function AppInner() {
           officialName={activeCustomer.officialName}
           firebaseEmail={firebaseUser?.email ?? null}
           firebaseConnected={firebaseConnected}
+          pendingSyncCount={pendingSyncCount}
           onLinkFirebaseGoogle={handleLinkFirebaseGoogle}
           soundEnabled={soundEnabled}
           onToggleSound={handleToggleSound}
@@ -2475,6 +3089,7 @@ function AppInner() {
           customerPasswords={customerPasswords}
           adminPassword={adminPassword}
           onGoogleSignIn={handleGoogleSignIn}
+          onRegisterCustomer={handleRegisterCustomer}
           onLogin={handleLogin}
           onClose={() => setActiveModal(null)}
         />
@@ -2559,7 +3174,29 @@ function AppInner() {
       )}
 
       {/* PWA Smart Auto Install Banner */}
-      <PWAInstallBanner />
+      <PWAInstallBanner
+        deferredPrompt={deferredPrompt}
+        isInstalled={isPwaInstalled}
+        isIOS={isIOSDevice}
+        onPromptConsumed={() => {
+          const win = window as unknown as {
+            __ozfDeferredPrompt?: BeforeInstallPromptEvent | null;
+          };
+          win.__ozfDeferredPrompt = null;
+          setDeferredPrompt(null);
+        }}
+        onInstalled={() => {
+          const win = window as unknown as {
+            __ozfDeferredPrompt?: BeforeInstallPromptEvent | null;
+            __ozfAppInstalled?: boolean;
+          };
+          win.__ozfDeferredPrompt = null;
+          win.__ozfAppInstalled = true;
+          setDeferredPrompt(null);
+          setIsPwaInstalled(true);
+          showToast('OZdigiFinance berhasil dipasang ke perangkat Anda!');
+        }}
+      />
 
       {/* Toast Notification */}
       {toastMsg && (
