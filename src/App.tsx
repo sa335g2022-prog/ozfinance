@@ -26,9 +26,11 @@ import type {
 } from './types/app';
 import {
   ADMIN_EMAIL,
+  ADMIN_WHATSAPP,
   applyLoanPayment,
   buildLoanItem,
   buildTransactionsCsv,
+  createSavingsAccountAssignment,
   ensureCustomerDefaultPassword,
   formatRupiah,
   normalizePhoneDigits,
@@ -48,10 +50,14 @@ import {
   createSessionToken,
   getInitialTheme,
   getValidSession,
+  loadAdminAvatar,
+  loadAdminDisplayName,
   loadAdminPassword,
   loadCustomerPasswords,
   loadStoredNotifications,
   persistSession,
+  saveAdminAvatar,
+  saveAdminDisplayName,
   saveAdminPassword,
   saveCustomerPasswords,
   saveStoredNotifications,
@@ -128,6 +134,7 @@ import { CustomerView } from './components/CustomerView';
 import { AdminView } from './components/AdminView';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import {
+  AddSavingsCustomerModal,
   AdminPayModal,
   AdminSavingsModal,
   AuthModal,
@@ -135,7 +142,6 @@ import {
   ConfirmDeleteModal,
   ConvertTypeModal,
   CustomerEditorModal,
-  DepositModal,
   LoanPayModal,
   LogoutConfirmModal,
   NotifCenterModal,
@@ -143,12 +149,12 @@ import {
   type ConvertModalState,
 } from './components/Modals';
 
-const LOCAL_CUSTOMERS_KEY = 'ozf_local_customers_v1';
-const LOCAL_TRANSACTIONS_KEY = 'ozf_local_transactions_v1';
-const LOCAL_CHATS_KEY = 'ozf_local_chats_v1';
+const LOCAL_CUSTOMERS_KEY = 'ozf_local_customers_v2';
+const LOCAL_TRANSACTIONS_KEY = 'ozf_local_transactions_v2';
+const LOCAL_CHATS_KEY = 'ozf_local_chats_v2';
 const LOCAL_UNREAD_CHAT_KEY = 'ozf_local_unread_chat_v1';
-const LOCAL_SAVINGS_KEY = 'ozf_local_savings_v1';
-const LOCAL_BILLS_KEY = 'ozf_local_bills_v1';
+const LOCAL_SAVINGS_KEY = 'ozf_local_savings_v2';
+const LOCAL_BILLS_KEY = 'ozf_local_bills_v2';
 
 interface UnreadChatPair {
   admin: number;
@@ -197,9 +203,9 @@ type ActiveModal =
   | { type: 'notifs' }
   | { type: 'profile' }
   | { type: 'logout' }
-  | { type: 'deposit' }
   | { type: 'adminPay' }
   | { type: 'adminSavings'; custId: string; txType: 'setor' | 'tarik' }
+  | { type: 'addSavingsCustomer' }
   | { type: 'customerEditor'; customer: CustomerRegistryItem | null }
   | { type: 'confirmDelete'; customer: CustomerRegistryItem }
   | { type: 'changeCustPass'; customer: CustomerRegistryItem }
@@ -259,6 +265,9 @@ function AppInner() {
       return null;
     }
   });
+
+  const [adminDisplayName, setAdminDisplayName] = useState<string>(() => loadAdminDisplayName());
+  const [adminAvatarUrl, setAdminAvatarUrl] = useState<string | null>(() => loadAdminAvatar());
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>(() =>
     loadLocalJson<TransactionRecord[]>(LOCAL_TRANSACTIONS_KEY, INITIAL_TRANSACTIONS)
@@ -366,6 +375,10 @@ function AppInner() {
     toastTimerRef.current = window.setTimeout(() => {
       setToastMsg(null);
     }, 3200);
+  }, []);
+
+  const handleRequestInstallApp = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('ozf:request-install'));
   }, []);
 
   const syncOrEnqueue = useCallback(
@@ -1395,7 +1408,7 @@ function AppInner() {
         targetRole,
         targetRole === 'admin' ? 'ADM-001' : activeCustomer.id,
         targetRole === 'admin' ? 'Admin OZdigiFinance' : activeCustomer.officialName,
-        targetRole === 'admin' ? ADMIN_EMAIL : activeCustomer.whatsapp
+        targetRole === 'admin' ? ADMIN_WHATSAPP : activeCustomer.whatsapp
       );
       persistSession(updated);
       setCurrentView(targetRole);
@@ -1604,95 +1617,155 @@ function AppInner() {
     [activeCustomer, firebaseUser, showToast, syncOrEnqueue]
   );
 
-  const handleCustomerDeposit = useCallback(
-    (amount: number) => {
-      const program = activeCustomerSavings?.program ?? defaultSavingsFreq;
-      const ownerUid =
-        (activeCustomer as CustomerRegistryItem & { ownerUid?: string }).ownerUid ||
-        (firebaseUser?.emailVerified ? firebaseUser.uid : '');
-      const updatedAcc: SavingsAccount = {
-        id: activeCustomer.id,
-        officialName: activeCustomer.officialName,
-        whatsapp: activeCustomer.whatsapp,
-        program,
-        routine: `${formatRupiah(amount)} / setoran`,
-        balance: (activeCustomerSavings?.balance ?? 0) + amount,
-        lastDate: '26 Nov 2026',
-        status: 'Aktif',
-      };
-      setSavingsAccounts((prev) => {
-        const exists = prev.some((acc) => acc.id === activeCustomer.id);
-        if (exists) {
-          return prev.map((acc) => (acc.id === activeCustomer.id ? updatedAcc : acc));
-        }
-        return [...prev, updatedAcc];
+  const handleAdminAddSavingsCustomer = useCallback(
+    (payload: {
+      mode: 'existing' | 'new';
+      selectedCustomerId?: string;
+      officialName?: string;
+      whatsapp?: string;
+      program: SavingsFrequency;
+      initialDeposit: number;
+    }): { ok: boolean; error?: string } => {
+      const res = createSavingsAccountAssignment({
+        mode: payload.mode,
+        existingCustomers: customers,
+        existingSavings: savingsAccounts,
+        selectedCustomerId: payload.selectedCustomerId,
+        officialName: payload.officialName,
+        whatsapp: payload.whatsapp,
+        program: payload.program,
+        initialDeposit: payload.initialDeposit,
       });
-      setMonthlySavingsInflow((v) => v + amount);
-      setSavingsMutations((prev) => [
-        {
-          id: 'MUT-' + Date.now(),
-          date: '26 Nov 2026',
-          officialName: activeCustomer.officialName,
-          custId: activeCustomer.id,
-          type: 'Setoran',
-          program,
-          amount,
-        },
-        ...prev,
-      ]);
+      if (!res.ok) {
+        return res;
+      }
 
-      const savTx: TransactionRecord = {
-        id: 'SAV-20261126-' + String(Math.floor(100 + Math.random() * 899)),
-        custId: activeCustomer.id,
-        officialName: activeCustomer.officialName,
-        description: 'Setoran Tabungan Digital',
-        date: '26 Nov 2026',
-        amount,
-        status: 'Berhasil',
-        scope: 'savings',
-      };
-      setTransactions((prev) => [savTx, ...prev]);
+      const { account, newCustomer, defaultPassword, initialDeposit } = res;
+      if (newCustomer) {
+        setCustomers((prev) => [...prev, newCustomer]);
+        setChatsByCustomer((prev) => ({
+          ...prev,
+          [newCustomer.id]: prev[newCustomer.id] ?? [],
+        }));
+        setCustomerPasswords((prev) => {
+          const next = defaultPassword
+            ? { ...prev, [newCustomer.id]: defaultPassword }
+            : ensureCustomerDefaultPassword(newCustomer, prev);
+          saveCustomerPasswords(next);
+          return next;
+        });
 
+        void syncOrEnqueue(
+          { kind: 'upsertCustomer', customer: newCustomer },
+          firebaseRole === 'admin' ? () => saveCustomerToFirestore(newCustomer) : undefined
+        );
+        void syncOrEnqueue(
+          {
+            kind: 'ensureConversation',
+            customerId: newCustomer.id,
+            customerUid: '',
+            customerName: newCustomer.officialName,
+            customerWhatsapp: newCustomer.whatsapp,
+            adminId: firebaseUser?.uid || 'ADMIN',
+          },
+          firebaseRole === 'admin'
+            ? () =>
+                ensureConversationDocInFirestore({
+                  customerId: newCustomer.id,
+                  customerUid: '',
+                  customerName: newCustomer.officialName,
+                  customerWhatsapp: newCustomer.whatsapp,
+                  adminId: firebaseUser?.uid || 'ADMIN',
+                })
+            : undefined
+        );
+      }
+
+      setSavingsAccounts((prev) => [...prev, account]);
       void syncOrEnqueue(
-        { kind: 'upsertSavings', account: updatedAcc, ownerUid },
-        () => saveSavingsToFirestore(updatedAcc, ownerUid)
+        { kind: 'upsertSavings', account },
+        firebaseRole === 'admin' ? () => saveSavingsToFirestore(account) : undefined
       );
-      void syncOrEnqueue(
-        {
-          kind: 'upsertTransaction',
-          tx: savTx,
-          customerUid: ownerUid,
-          adminId: 'ADMIN',
-          sisaTagihan: activeCustomer.remainingDebt,
-          jenisTransaksi: 'savings',
-        },
-        () =>
-          saveTransactionDocToFirestore({
+
+      if (initialDeposit > 0) {
+        setMonthlySavingsInflow((v) => v + initialDeposit);
+        setSavingsMutations((prev) => [
+          {
+            id: 'MUT-' + Date.now(),
+            date: account.lastDate,
+            officialName: account.officialName,
+            custId: account.id,
+            type: 'Setoran',
+            program: account.program,
+            amount: initialDeposit,
+            note: 'Setoran awal rekening tabungan oleh Admin',
+          },
+          ...prev,
+        ]);
+
+        const savTx: TransactionRecord = {
+          id: 'SAV-20261126-ADM-' + String(Math.floor(100 + Math.random() * 899)),
+          custId: account.id,
+          officialName: account.officialName,
+          description: 'Setoran Awal Tabungan (Terverifikasi Admin)',
+          date: account.lastDate,
+          amount: initialDeposit,
+          status: 'Terverifikasi',
+          scope: 'savings',
+        };
+        setTransactions((prev) => [savTx, ...prev]);
+
+        const targetOwnerUid =
+          (customers.find((c) => c.id === account.id) as
+            | (CustomerRegistryItem & { ownerUid?: string })
+            | undefined)?.ownerUid || '';
+        void syncOrEnqueue(
+          {
+            kind: 'upsertTransaction',
             tx: savTx,
-            customerUid: ownerUid,
-            adminId: 'ADMIN',
-            sisaTagihan: activeCustomer.remainingDebt,
+            customerUid: targetOwnerUid,
+            adminId: firebaseUser?.uid || 'ADMIN',
+            sisaTagihan: customers.find((c) => c.id === account.id)?.remainingDebt ?? 0,
             jenisTransaksi: 'savings',
-          })
-      );
+          },
+          firebaseRole === 'admin'
+            ? () =>
+                saveTransactionDocToFirestore({
+                  tx: savTx,
+                  customerUid: targetOwnerUid,
+                  adminId: firebaseUser?.uid || 'ADMIN',
+                  sisaTagihan: customers.find((c) => c.id === account.id)?.remainingDebt ?? 0,
+                  jenisTransaksi: 'savings',
+                })
+            : undefined
+        );
+      }
 
       pushCustomerNotification({
-        custId: activeCustomer.id,
+        custId: account.id,
         category: 'sav',
-        title: 'Setoran Tabungan Berhasil',
-        desc: `Setoran tabungan ${formatRupiah(amount)} (${program}) berhasil dicatat ke rekening Anda.`,
+        title: 'Rekening Tabungan Digital Aktif',
+        desc: `Admin OZdigiFinance membuka rekening tabungan ${account.program} untuk ${account.officialName} (${account.id})${
+          initialDeposit > 0 ? ` dengan saldo awal ${formatRupiah(initialDeposit)}` : ''
+        }.`,
         playSound: true,
         soundCategory: 'TRANSACTION_ALERT',
       });
+
       setActiveModal(null);
-      showToast(`Setoran tabungan ${formatRupiah(amount)} berhasil ditambahkan!`);
+      showToast(
+        newCustomer
+          ? `Nasabah baru ${account.officialName} (${account.id}) ditambahkan ke Tabungan & siap login dengan No. WA!`
+          : `Rekening tabungan ${account.officialName} (${account.id}) berhasil dibuka!`
+      );
+      return { ok: true };
     },
     [
-      activeCustomer,
-      activeCustomerSavings,
-      defaultSavingsFreq,
+      customers,
+      firebaseRole,
       firebaseUser,
       pushCustomerNotification,
+      savingsAccounts,
       showToast,
       syncOrEnqueue,
     ]
@@ -2835,28 +2908,46 @@ function AppInner() {
 
   const handleSaveProfile = useCallback(
     (newName: string, avatarDataUrl: string, newPass: string) => {
-      if (newName) {
-        setDisplayName(newName);
-        try {
-          localStorage.setItem(DISPLAY_NAME_KEY, newName);
-        } catch {
-          // Ignore
+      if (currentView === 'admin') {
+        if (newName) {
+          setAdminDisplayName(newName);
+          saveAdminDisplayName(newName);
+          if (firebaseUser?.emailVerified) {
+            void updateUserProfileInFirestore({
+              uid: firebaseUser.uid,
+              nama: newName,
+            });
+          }
         }
-        if (firebaseUser?.emailVerified) {
-          void updateUserProfileInFirestore({
-            uid: firebaseUser.uid,
-            nama: newName,
-          });
+        if (avatarDataUrl) {
+          setAdminAvatarUrl(avatarDataUrl);
+          saveAdminAvatar(avatarDataUrl);
+        }
+      } else {
+        if (newName) {
+          setDisplayName(newName);
+          try {
+            localStorage.setItem(DISPLAY_NAME_KEY, newName);
+          } catch {
+            // Ignore
+          }
+          if (firebaseUser?.emailVerified) {
+            void updateUserProfileInFirestore({
+              uid: firebaseUser.uid,
+              nama: newName,
+            });
+          }
+        }
+        if (avatarDataUrl) {
+          setAvatarUrl(avatarDataUrl);
+          try {
+            localStorage.setItem(AVATAR_KEY, avatarDataUrl);
+          } catch {
+            // Ignore
+          }
         }
       }
-      if (avatarDataUrl) {
-        setAvatarUrl(avatarDataUrl);
-        try {
-          localStorage.setItem(AVATAR_KEY, avatarDataUrl);
-        } catch {
-          // Ignore
-        }
-      }
+
       if (newPass) {
         if (currentView === 'admin') {
           setAdminPassword(newPass);
@@ -2876,6 +2967,8 @@ function AppInner() {
       showToast(
         newPass
           ? 'Profil & password akun berhasil diperbarui!'
+          : currentView === 'admin'
+          ? 'Profil Admin berhasil diperbarui!'
           : `Profil diperbarui! Nama resmi di kontrak & data Admin tetap ${activeCustomer.officialName}.`
       );
     },
@@ -2901,7 +2994,9 @@ function AppInner() {
         <GuestView
           theme={theme}
           onToggleTheme={toggleTheme}
-          onOpenAuth={(mode) => setActiveModal({ type: 'auth', mode })}
+          isPwaInstalled={isPwaInstalled}
+          onInstallApp={handleRequestInstallApp}
+          onOpenAuth={(mode, initialTab) => setActiveModal({ type: 'auth', mode, initialTab })}
         />
       )}
 
@@ -2915,6 +3010,8 @@ function AppInner() {
           }}
           theme={theme}
           onToggleTheme={toggleTheme}
+          isPwaInstalled={isPwaInstalled}
+          onInstallApp={handleRequestInstallApp}
           displayName={displayName}
           avatarUrl={avatarUrl}
           savingsBalance={activeCustomerSavings?.balance ?? 0}
@@ -2926,7 +3023,6 @@ function AppInner() {
           bellUrgentKey={bellUrgentKey}
           onOpenNotifs={() => setActiveModal({ type: 'notifs' })}
           onOpenProfile={() => setActiveModal({ type: 'profile' })}
-          onOpenDeposit={() => setActiveModal({ type: 'deposit' })}
           onSubmitPayProof={handleSubmitPayProof}
           chatMessages={chatsByCustomer[activeCustomer.id] ?? []}
           hasOlderMessages={hasOlderMessages}
@@ -2947,8 +3043,10 @@ function AppInner() {
           }}
           theme={theme}
           onToggleTheme={toggleTheme}
-          displayName={displayName}
-          avatarUrl={avatarUrl}
+          isPwaInstalled={isPwaInstalled}
+          onInstallApp={handleRequestInstallApp}
+          displayName={adminDisplayName}
+          avatarUrl={adminAvatarUrl}
           activeCustomerName={activeCustomer.officialName}
           customers={customers}
           transactions={transactions}
@@ -2971,6 +3069,7 @@ function AppInner() {
           onOpenAdminSavings={(custId, txType) =>
             setActiveModal({ type: 'adminSavings', custId, txType })
           }
+          onOpenAddSavingsCustomer={() => setActiveModal({ type: 'addSavingsCustomer' })}
           onAddCustomer={() => setActiveModal({ type: 'customerEditor', customer: null })}
           onEditCustomer={(cust) => setActiveModal({ type: 'customerEditor', customer: cust })}
           onDeleteCustomer={(cust) => setActiveModal({ type: 'confirmDelete', customer: cust })}
@@ -3060,10 +3159,11 @@ function AppInner() {
           isAdminSession={isAdminSession}
           activeUserId={currentView === 'admin' ? 'ADM-001' : activeCustomer.id}
           activeUserIdentifier={
-            currentView === 'admin' ? ADMIN_EMAIL : activeCustomer.whatsapp
+            currentView === 'admin' ? ADMIN_WHATSAPP : activeCustomer.whatsapp
           }
-          displayName={displayName}
+          displayName={currentView === 'admin' ? adminDisplayName : displayName}
           officialName={activeCustomer.officialName}
+          avatarUrl={currentView === 'admin' ? adminAvatarUrl : avatarUrl}
           firebaseEmail={firebaseUser?.email ?? null}
           firebaseConnected={firebaseConnected}
           pendingSyncCount={pendingSyncCount}
@@ -3102,13 +3202,6 @@ function AppInner() {
         />
       )}
 
-      {activeModal?.type === 'deposit' && (
-        <DepositModal
-          onSubmit={handleCustomerDeposit}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
       {activeModal?.type === 'adminPay' && (
         <AdminPayModal
           customers={customers}
@@ -3123,6 +3216,15 @@ function AppInner() {
           initialCustId={activeModal.custId}
           initialTxType={activeModal.txType}
           onSubmit={handleAdminSavingsSubmit}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+
+      {activeModal?.type === 'addSavingsCustomer' && (
+        <AddSavingsCustomerModal
+          customers={customers}
+          savingsAccounts={savingsAccounts}
+          onSubmit={handleAdminAddSavingsCustomer}
           onClose={() => setActiveModal(null)}
         />
       )}

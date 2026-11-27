@@ -89,6 +89,17 @@ export const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({
     setShowGuideModal(true);
   };
 
+  const installHandlerRef = React.useRef(handleInstallClick);
+  installHandlerRef.current = handleInstallClick;
+
+  useEffect(() => {
+    const onExternalInstallRequest = () => {
+      void installHandlerRef.current();
+    };
+    window.addEventListener('ozf:request-install', onExternalInstallRequest);
+    return () => window.removeEventListener('ozf:request-install', onExternalInstallRequest);
+  }, []);
+
   const handleDismiss = () => {
     const until = Date.now() + PWA_REMINDER_COOLDOWN_MS;
     setDismissedUntilMs(until);
@@ -101,7 +112,7 @@ export const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({
         <aside
           aria-label="Instal Aplikasi PWA"
           data-testid="pwa-install-banner"
-          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 animate-in fade-in slide-in-from-bottom-5 duration-300"
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-40 animate-in fade-in slide-in-from-bottom-5 duration-300"
         >
           <div className="rounded-2xl bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-blue-500/30 p-4 shadow-2xl text-white relative overflow-hidden">
             <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />

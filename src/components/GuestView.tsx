@@ -10,15 +10,19 @@ import {
   ArrowRight,
   CalendarDays,
   CalendarRange,
+  Shield,
 } from 'lucide-react';
 import type { ThemeMode } from '../types/app';
 import { BrandLogo } from './BrandLogo';
+import { HeaderInstallButton } from './HeaderInstallButton';
 import { LoanSimulator } from './LoanSimulator';
 
 interface GuestViewProps {
   theme: ThemeMode;
   onToggleTheme: () => void;
-  onOpenAuth: (mode: 'login' | 'register') => void;
+  isPwaInstalled: boolean;
+  onInstallApp: () => void;
+  onOpenAuth: (mode: 'login' | 'register', initialTab?: 'customer' | 'admin') => void;
 }
 
 const GUEST_SECTIONS = [
@@ -31,6 +35,8 @@ const GUEST_SECTIONS = [
 export const GuestView: React.FC<GuestViewProps> = ({
   theme,
   onToggleTheme,
+  isPwaInstalled,
+  onInstallApp,
   onOpenAuth,
 }) => {
   const [activeSec, setActiveSec] = useState<string>('g-hero');
@@ -69,17 +75,29 @@ export const GuestView: React.FC<GuestViewProps> = ({
     <div className="min-h-screen flex flex-col">
       {/* Sticky Header following clean 3-zone layout */}
       <header className="fixed top-0 inset-x-0 z-30 h-14 md:h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-4 sm:gap-8">
-          <a
-            href="#g-hero"
-            onClick={(e) => {
-              e.preventDefault();
-              scrollToSection('g-hero');
-            }}
-            className="shrink-0 focus-visible:outline-2 focus-visible:outline-blue-600 rounded-md"
-          >
-            <BrandLogo />
-          </a>
+        <div className="max-w-6xl mx-auto h-full px-2.5 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-6">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+            <a
+              href="#g-hero"
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToSection('g-hero');
+              }}
+              className="shrink-0 focus-visible:outline-2 focus-visible:outline-blue-600 rounded-md"
+            >
+              <span className="sm:hidden">
+                <BrandLogo size="sm" />
+              </span>
+              <span className="hidden sm:inline">
+                <BrandLogo />
+              </span>
+            </a>
+            <HeaderInstallButton
+              isInstalled={isPwaInstalled}
+              onClick={onInstallApp}
+              compact
+            />
+          </div>
 
           <nav
             aria-label="Navigasi utama"
@@ -101,30 +119,39 @@ export const GuestView: React.FC<GuestViewProps> = ({
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={onToggleTheme}
               aria-label={theme === 'dark' ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'}
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               {theme === 'dark' ? (
-                <Sun className="w-[18px] h-[18px]" />
+                <Sun className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               ) : (
-                <Moon className="w-[18px] h-[18px]" />
+                <Moon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               )}
             </button>
             <button
               type="button"
               onClick={() => onOpenAuth('login')}
-              className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold hover:border-blue-500 transition-colors whitespace-nowrap shrink-0"
+              className="min-h-[34px] sm:min-h-[40px] px-2.5 sm:px-4 py-1 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-semibold hover:border-blue-500 transition-colors whitespace-nowrap shrink-0"
             >
               Masuk
             </button>
             <button
               type="button"
+              data-testid="header-admin-login-btn"
+              onClick={() => onOpenAuth('login', 'admin')}
+              className="hidden sm:inline-flex min-h-[40px] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold hover:border-blue-500 items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+            >
+              <Shield className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              <span>Login Admin</span>
+            </button>
+            <button
+              type="button"
               onClick={() => onOpenAuth('register')}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0 shadow-sm"
+              className="min-h-[34px] sm:min-h-[40px] px-2.5 sm:px-4 py-1 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0 shadow-sm"
             >
               Daftar
             </button>
@@ -165,6 +192,15 @@ export const GuestView: React.FC<GuestViewProps> = ({
               className="min-h-[44px] px-5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 text-slate-800 dark:text-slate-100 text-sm font-semibold transition-colors whitespace-nowrap"
             >
               Masuk Akun Nasabah
+            </button>
+            <button
+              type="button"
+              data-testid="guest-admin-login-btn"
+              onClick={() => onOpenAuth('login', 'admin')}
+              className="min-h-[44px] px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800/90 border border-slate-800 dark:border-slate-700 hover:border-blue-500 text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <Shield className="w-4 h-4 text-blue-400" aria-hidden="true" />
+              <span>Login Admin</span>
             </button>
           </div>
         </section>

@@ -10,8 +10,9 @@ import type {
 import { buildLoanItem, summarizeCustomerFromLoans } from '../utils/finance';
 
 /**
- * Data nasabah & nomor WhatsApp resmi bersumber langsung dari Google Sheet:
- * "TAGIHAN PAYLATER - B'DONG" (10 Nasabah Pinjaman Aktif, pinjaman ganda dipisahkan per kontrak)
+ * Data nasabah, kontrak pinjaman, jadwal angsuran, & nomor WhatsApp resmi
+ * bersumber langsung dari Google Spreadsheet:
+ * https://docs.google.com/spreadsheets/d/1cggNkAq8t7yXskIszjHJ2Qjg5f1gmfAn9wOQETeMnDc
  */
 export const INITIAL_CUSTOMERS: CustomerRegistryItem[] = [
   summarizeCustomerFromLoans({
@@ -169,7 +170,7 @@ export const INITIAL_CUSTOMERS: CustomerRegistryItem[] = [
       }),
       buildLoanItem({
         id: 'LN-00004-2',
-        productName: 'Spinjam RT. 09 & 10',
+        productName: 'Spinjam',
         monthlyInstallment: 1_380_002,
         paidInstallments: 4,
         totalInstallments: 6,
@@ -387,108 +388,46 @@ export const INITIAL_CUSTOMERS: CustomerRegistryItem[] = [
   }),
 ];
 
-export const INITIAL_TRANSACTIONS: TransactionRecord[] = [
-  {
-    id: 'TRX-20261125-001',
-    custId: 'OZF-00001',
-    officialName: "B'DONK",
-    description: 'Paylater HP · Angsuran ke-8',
-    date: '25 Nov 2026',
-    amount: 751_581,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261125-005',
-    custId: 'OZF-00005',
-    officialName: 'GF',
-    description: 'Spinjam · Angsuran ke-5',
-    date: '25 Nov 2026',
-    amount: 1_141_032,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261125-006',
-    custId: 'OZF-00005',
-    officialName: 'GF',
-    description: 'SPC · Angsuran ke-4',
-    date: '25 Nov 2026',
-    amount: 505_676,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261124-004',
-    custId: 'OZF-00004',
-    officialName: 'RT 10',
-    description: 'HP Warman · Angsuran ke-10',
-    date: '24 Nov 2026',
-    amount: 187_292,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261121-003',
-    custId: 'OZF-00003',
-    officialName: 'QWONK',
-    description: 'Sepeda Listrik · Angsuran ke-2',
-    date: '21 Nov 2026',
-    amount: 1_299_304,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261116-007',
-    custId: 'OZF-00007',
-    officialName: 'RQ BRO',
-    description: 'Spinjam #1 · Angsuran ke-2',
-    date: '16 Nov 2026',
-    amount: 1_879_323,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261110-010',
-    custId: 'OZF-00010',
-    officialName: 'TITIN',
-    description: 'Spinjam · Angsuran ke-1',
-    date: '10 Nov 2026',
-    amount: 439_287,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261105-006',
-    custId: 'OZF-00006',
-    officialName: 'BASTUS',
-    description: 'HP Infinix · Angsuran ke-8',
-    date: '05 Nov 2026',
-    amount: 340_314,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261102-001',
-    custId: 'OZF-00001',
-    officialName: "B'DONK",
-    description: 'Paylater Freezer · Angsuran ke-2',
-    date: '02 Nov 2026',
-    amount: 300_704,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-  {
-    id: 'TRX-20261024-001',
-    custId: 'OZF-00001',
-    officialName: "B'DONK",
-    description: 'Paylater HP · Angsuran ke-7',
-    date: '24 Okt 2026',
-    amount: 751_581,
-    status: 'Terverifikasi',
-    scope: 'loan',
-  },
-];
+const ID_MONTH_MAP: Record<string, number> = {
+  Jan: 0,
+  Feb: 1,
+  Mar: 2,
+  Apr: 3,
+  Mei: 4,
+  Jun: 5,
+  Jul: 6,
+  Agu: 7,
+  Sep: 8,
+  Okt: 9,
+  Nov: 10,
+  Des: 11,
+};
+
+function parseIndoDateMs(label: string): number {
+  const parts = label.trim().split(/\s+/);
+  if (parts.length !== 3) return 0;
+  const day = Number(parts[0]) || 1;
+  const month = ID_MONTH_MAP[parts[1]] ?? 0;
+  const year = Number(parts[2]) || 2026;
+  return Date.UTC(year, month, day);
+}
+
+export const INITIAL_TRANSACTIONS: TransactionRecord[] = INITIAL_CUSTOMERS.flatMap((cust) =>
+  cust.loans.flatMap((loan) =>
+    loan.schedule
+      .filter((row) => row.status === 'Lunas')
+      .map((row) => ({
+        id: `TRX-${cust.id}-${loan.id}-ANG${row.installmentNumber}`,
+        custId: cust.id,
+        officialName: cust.officialName,
+        description: `${loan.productName} · Angsuran ke-${row.installmentNumber}`,
+        date: row.date,
+        amount: row.amount,
+        status: 'Terverifikasi' as const,
+        scope: 'loan' as const,
+      }))
+  )
+).sort((a, b) => parseIndoDateMs(b.date) - parseIndoDateMs(a.date));
 
 export const INITIAL_SAVINGS_ACCOUNTS: SavingsAccount[] = [];
 
@@ -552,7 +491,7 @@ export const INITIAL_UPCOMING_DUES = [
     day: '05',
     name: 'RT 10',
     whatsapp: '085697732501',
-    meta: 'OZF-00004 · Spinjam RT. 09 & 10 · WA: 085697732501',
+    meta: 'OZF-00004 · Spinjam · WA: 085697732501',
     amount: 1_380_002,
   },
   {

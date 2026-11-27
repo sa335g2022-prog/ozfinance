@@ -7,6 +7,9 @@ export const COOKIE_NAME = 'ozf_session_token';
 export const NOTIF_STORAGE_KEY = 'ozf_customer_notifs_v3';
 export const CUSTOMER_PASSWORDS_KEY = 'ozf_customer_passwords_v1';
 export const ADMIN_PASSWORD_KEY = 'ozf_admin_password_v1';
+export const ADMIN_DISPLAY_NAME_KEY = 'ozf_admin_display_name_v1';
+export const ADMIN_AVATAR_KEY = 'ozf_admin_avatar_v1';
+export const DEFAULT_ADMIN_DISPLAY_NAME = 'OZNET';
 export const THEME_KEY = 'oz_theme';
 export const DISPLAY_NAME_KEY = 'oz_display_name';
 export const AVATAR_KEY = 'oz_avatar_url';
@@ -48,6 +51,41 @@ export function loadAdminPassword(): string {
 export function saveAdminPassword(pass: string): void {
   try {
     localStorage.setItem(ADMIN_PASSWORD_KEY, pass);
+  } catch {
+    // Ignore
+  }
+}
+
+export function loadAdminDisplayName(): string {
+  try {
+    const raw = localStorage.getItem(ADMIN_DISPLAY_NAME_KEY);
+    if (raw && raw.trim().length > 0) return raw.trim();
+  } catch {
+    // Ignore
+  }
+  return DEFAULT_ADMIN_DISPLAY_NAME;
+}
+
+export function saveAdminDisplayName(name: string): void {
+  try {
+    localStorage.setItem(ADMIN_DISPLAY_NAME_KEY, name);
+  } catch {
+    // Ignore
+  }
+}
+
+export function loadAdminAvatar(): string | null {
+  try {
+    const raw = localStorage.getItem(ADMIN_AVATAR_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveAdminAvatar(dataUrl: string): void {
+  try {
+    localStorage.setItem(ADMIN_AVATAR_KEY, dataUrl);
   } catch {
     // Ignore
   }

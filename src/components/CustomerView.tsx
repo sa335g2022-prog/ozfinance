@@ -35,6 +35,7 @@ import type {
 } from '../types/app';
 import { formatRupiah, toWhatsAppHref } from '../utils/finance';
 import { BrandLogo } from './BrandLogo';
+import { HeaderInstallButton } from './HeaderInstallButton';
 import { LoanSimulator } from './LoanSimulator';
 import { StatusBadge } from './StatusBadge';
 
@@ -44,6 +45,8 @@ interface CustomerViewProps {
   onNavigate: (page: CustomerPageId) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
+  isPwaInstalled: boolean;
+  onInstallApp: () => void;
   displayName: string;
   avatarUrl: string | null;
   savingsBalance: number;
@@ -55,7 +58,6 @@ interface CustomerViewProps {
   bellUrgentKey: number;
   onOpenNotifs: () => void;
   onOpenProfile: () => void;
-  onOpenDeposit: () => void;
   onSubmitPayProof: (billLabel: string, amount: number) => void;
   chatMessages: ChatMessage[];
   hasOlderMessages?: boolean;
@@ -88,6 +90,8 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   onNavigate,
   theme,
   onToggleTheme,
+  isPwaInstalled,
+  onInstallApp,
   displayName,
   avatarUrl,
   savingsBalance,
@@ -99,7 +103,6 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
   bellUrgentKey,
   onOpenNotifs,
   onOpenProfile,
-  onOpenDeposit,
   onSubmitPayProof,
   chatMessages,
   hasOlderMessages = false,
@@ -238,8 +241,15 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
     <div className="min-h-screen">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-60 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 px-4 py-5 flex-col z-20">
-        <div className="px-2 pb-4 border-b border-slate-200 dark:border-slate-800">
-          <BrandLogo />
+        <div className="px-0.5 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-1">
+            <BrandLogo size="sm" />
+            <HeaderInstallButton
+              isInstalled={isPwaInstalled}
+              onClick={onInstallApp}
+              sidebar
+            />
+          </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Solusi Finansial Digital Anda
           </p>
@@ -299,10 +309,15 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
       </aside>
 
       {/* Fixed Topbar */}
-      <header className="fixed top-0 left-0 md:left-60 right-0 h-14 md:h-16 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-7 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="md:hidden shrink-0">
+      <header className="fixed top-0 left-0 md:left-60 right-0 h-14 md:h-16 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-7 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="md:hidden flex items-center gap-2 shrink-0">
             <BrandLogo size="sm" />
+            <HeaderInstallButton
+              isInstalled={isPwaInstalled}
+              onClick={onInstallApp}
+              compact
+            />
           </div>
           <h1 className="hidden md:block text-sm font-bold text-slate-900 dark:text-white truncate">
             {PAGE_TITLES[activePage]}
@@ -504,24 +519,17 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                     {formatRupiah(savingsBalance)}
                   </strong>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Setoran rutin terjadwal sesuai pilihan paket Anda
+                    Transaksi setor &amp; tarik dana tabungan diproses oleh Admin OZdigiFinance
                   </p>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={onOpenDeposit}
-                    className="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors whitespace-nowrap"
-                  >
-                    + Setor Tabungan
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => onNavigate('c-tabungan')}
                     className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors whitespace-nowrap"
                   >
-                    Ubah Opsi
+                    Lihat &amp; Ubah Opsi Tabungan
                   </button>
                 </div>
               </div>
@@ -544,14 +552,14 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
 
               <button
                 type="button"
-                onClick={onOpenDeposit}
+                onClick={() => onNavigate('c-tabungan')}
                 className="min-h-[84px] p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 flex flex-col items-center justify-center gap-2 transition-colors"
               >
                 <span className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <Wallet className="w-[18px] h-[18px]" />
                 </span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                  Setor Tabungan
+                  Saldo Tabungan
                 </span>
               </button>
 
@@ -816,13 +824,9 @@ export const CustomerView: React.FC<CustomerViewProps> = ({
                   ({customer.id} · WA: {customer.whatsapp})
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onOpenDeposit}
-                className="min-h-[44px] px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shadow-sm"
-              >
-                + Setor Tabungan Sekarang
-              </button>
+              <div className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-xs font-semibold text-slate-600 dark:text-slate-300 max-w-xs">
+                Setoran &amp; penarikan dana tabungan hanya dapat diproses langsung oleh Admin OZdigiFinance.
+              </div>
             </div>
 
             <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5">

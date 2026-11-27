@@ -45,6 +45,7 @@ import type {
 } from '../types/app';
 import { buildUpcomingDuesFromCustomers, formatRupiah, toWhatsAppHref } from '../utils/finance';
 import { BrandLogo } from './BrandLogo';
+import { HeaderInstallButton } from './HeaderInstallButton';
 import { StatusBadge } from './StatusBadge';
 
 interface AdminViewProps {
@@ -52,6 +53,8 @@ interface AdminViewProps {
   onNavigate: (page: AdminPageId) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
+  isPwaInstalled: boolean;
+  onInstallApp: () => void;
   displayName: string;
   avatarUrl: string | null;
   activeCustomerName: string;
@@ -75,6 +78,7 @@ interface AdminViewProps {
   onOpenAdminPay: () => void;
   onOpenLoanPay: (customer: CustomerRegistryItem, loan: LoanItem) => void;
   onOpenAdminSavings: (custId: string, txType: 'setor' | 'tarik') => void;
+  onOpenAddSavingsCustomer: () => void;
   onAddCustomer: () => void;
   onEditCustomer: (customer: CustomerRegistryItem) => void;
   onChangeCustomerPassword: (customer: CustomerRegistryItem) => void;
@@ -121,6 +125,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onNavigate,
   theme,
   onToggleTheme,
+  isPwaInstalled,
+  onInstallApp,
   displayName,
   avatarUrl,
   activeCustomerName,
@@ -144,6 +150,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenAdminPay,
   onOpenLoanPay,
   onOpenAdminSavings,
+  onOpenAddSavingsCustomer,
   onAddCustomer,
   onEditCustomer,
   onChangeCustomerPassword,
@@ -284,8 +291,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
     <div className="min-h-screen">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-60 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 px-4 py-5 flex-col z-20">
-        <div className="px-2 pb-4 border-b border-slate-200 dark:border-slate-800">
-          <BrandLogo />
+        <div className="px-0.5 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-1">
+            <BrandLogo size="sm" />
+            <HeaderInstallButton
+              isInstalled={isPwaInstalled}
+              onClick={onInstallApp}
+              sidebar
+            />
+          </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Panel Operasional Internal
           </p>
@@ -345,10 +359,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </aside>
 
       {/* Fixed Topbar */}
-      <header className="fixed top-0 left-0 md:left-60 right-0 h-14 md:h-16 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-7 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="md:hidden shrink-0">
+      <header className="fixed top-0 left-0 md:left-60 right-0 h-14 md:h-16 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 sm:px-7 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="md:hidden flex items-center gap-2 shrink-0">
             <BrandLogo size="sm" />
+            <HeaderInstallButton
+              isInstalled={isPwaInstalled}
+              onClick={onInstallApp}
+              compact
+            />
           </div>
           <h1 className="hidden md:block text-sm font-bold text-slate-900 dark:text-white truncate">
             {PAGE_TITLES[activePage]}
@@ -1030,15 +1049,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     Menampilkan nama resmi &amp; No. WA nasabah sesuai registrasi kontrak
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onOpenAdminSavings(savingsAccounts[0]?.id ?? customers[0]?.id ?? '', 'setor')
-                  }
-                  className="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors whitespace-nowrap"
-                >
-                  + Catat Transaksi Tabungan
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="admin-add-savings-cust-btn"
+                    onClick={onOpenAddSavingsCustomer}
+                    className="min-h-[40px] px-4 py-2 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-600 hover:text-white text-blue-700 dark:text-blue-300 text-xs font-bold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Tambah Nasabah Tabungan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenAdminSavings(savingsAccounts[0]?.id ?? customers[0]?.id ?? '', 'setor')
+                    }
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors whitespace-nowrap"
+                  >
+                    + Catat Transaksi Tabungan
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">

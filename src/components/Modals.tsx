@@ -46,13 +46,15 @@ import type {
   ViewRole,
 } from '../types/app';
 import {
-  ADMIN_EMAIL,
+  ADMIN_WHATSAPP,
   buildLoanItem,
+  computeAvatarDrawLayout,
   formatRupiah,
   generateNextCustomerId,
   summarizeCustomerFromLoans,
   verifyAdminLogin,
   verifyCustomerLogin,
+  type AvatarFitMode,
 } from '../utils/finance';
 import {
   authenticateWebAuthnFingerprint,
@@ -432,6 +434,7 @@ interface ProfileModalProps {
   activeUserIdentifier: string;
   displayName: string;
   officialName: string;
+  avatarUrl?: string | null;
   firebaseEmail?: string | null;
   firebaseConnected?: boolean;
   pendingSyncCount?: number;
@@ -455,6 +458,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   activeUserIdentifier,
   displayName,
   officialName,
+  avatarUrl = null,
   firebaseEmail,
   firebaseConnected = true,
   pendingSyncCount = 0,
@@ -483,9 +487,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const [zoomPct, setZoomPct] = useState(100);
   const [rotDeg, setRotDeg] = useState(0);
+  const [fitMode, setFitMode] = useState<AvatarFitMode>('contain');
   const [nameInput, setNameInput] = useState(displayName);
   const [passInput, setPassInput] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [hasCustomPhoto, setHasCustomPhoto] = useState<boolean>(Boolean(avatarUrl));
+  const cropEditedRef = useRef<boolean>(false);
 
   const accountRole: 'customer' | 'admin' = currentView === 'admin' ? 'admin' : 'customer';
   const [fpRegistered, setFpRegistered] = useState<boolean>(() =>
@@ -497,7 +504,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [fpStatusMsg, setFpStatusMsg] = useState<string | null>(null);
 
   const drawCrop = useCallback(
-    (zoomVal = zoomPct, rotVal = rotDeg, nameVal = nameInput) => {
+    (
+      zoomVal = zoomPct,
+      rotVal = rotDeg,
+      nameVal = nameInput,
+      modeVal: AvatarFitMode = fitMode
+    ) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -507,25 +519,47 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      ctx.save();
-      ctx.translate(w / 2 + dragRef.current.x, h / 2 + dragRef.current.y);
-      ctx.rotate((rotVal * Math.PI) / 180);
-      ctx.scale(zoomVal / 100, zoomVal / 100);
-
       const img = imgRef.current;
       if (img) {
-        const ratio = Math.max(w / img.width, h / img.height);
-        const dw = img.width * ratio;
-        const dh = img.height * ratio;
-        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        const layout = computeAvatarDrawLayout({
+          canvasWidth: w,
+          canvasHeight: h,
+          imgWidth: img.naturalWidth || img.width,
+          imgHeight: img.naturalHeight || img.height,
+          fitMode: modeVal,
+        });
+
+        // When contain leaves margin (non-square image or zoomed out < 100%), fill soft backdrop
+        if (layout.isNonSquare || zoomVal < 100) {
+          ctx.save();
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, 0, w, h);
+          try {
+            ctx.filter = 'blur(14px) brightness(0.42)';
+            ctx.translate(w / 2, h / 2);
+            ctx.drawImage(img, -layout.coverDw / 2, -layout.coverDh / 2, layout.coverDw, layout.coverDh);
+          } catch {
+            // Fallback solid slate backdrop when ctx.filter is unsupported
+          }
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(w / 2 + dragRef.current.x, h / 2 + dragRef.current.y);
+        ctx.rotate((rotVal * Math.PI) / 180);
+        ctx.scale(zoomVal / 100, zoomVal / 100);
+        ctx.drawImage(img, -layout.dw / 2, -layout.dh / 2, layout.dw, layout.dh);
+        ctx.restore();
       } else {
+        ctx.save();
+        ctx.translate(w / 2, h / 2);
         const grad = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
         grad.addColorStop(0, '#2563eb');
         grad.addColorStop(1, '#1e3a8a');
         ctx.fillStyle = grad;
         ctx.fillRect(-w / 2, -h / 2, w, h);
         ctx.fillStyle = '#ffffff';
-        ctx.font = '800 64px "Plus Jakarta Sans", sans-serif';
+        ctx.font = `800 ${Math.round(w * 0.28)}px "Plus Jakarta Sans", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const initials =
@@ -538,10 +572,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             .slice(0, 2)
             .toUpperCase() || 'BD';
         ctx.fillText(initials, 0, 4);
+        ctx.restore();
       }
-      ctx.restore();
     },
-    [zoomPct, rotDeg, nameInput]
+    [zoomPct, rotDeg, nameInput, fitMode]
   );
 
   useEffect(() => {
@@ -550,6 +584,35 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [drawCrop]);
+
+  useEffect(() => {
+    if (!avatarUrl) {
+      imgRef.current = null;
+      setHasCustomPhoto(false);
+      cropEditedRef.current = false;
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (cancelled) return;
+      imgRef.current = img;
+      setHasCustomPhoto(true);
+      cropEditedRef.current = false;
+      dragRef.current = { dragging: false, startX: 0, startY: 0, x: 0, y: 0 };
+      setZoomPct(100);
+      setRotDeg(0);
+      setFitMode('contain');
+      drawCrop(100, 0, nameInput, 'contain');
+    };
+    img.src = avatarUrl;
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally load persisted avatarUrl onto canvas when modal opens or avatarUrl updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarUrl]);
 
   const scheduleDraw = () => {
     if (rafRef.current !== null) return;
@@ -569,10 +632,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       const img = new Image();
       img.onload = () => {
         imgRef.current = img;
+        setHasCustomPhoto(true);
+        cropEditedRef.current = true;
         dragRef.current = { dragging: false, startX: 0, startY: 0, x: 0, y: 0 };
         setZoomPct(100);
         setRotDeg(0);
-        drawCrop(100, 0, nameInput);
+        setFitMode('contain');
+        drawCrop(100, 0, nameInput, 'contain');
       };
       img.src = src;
     };
@@ -580,6 +646,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   const stepRotate = (delta: number) => {
+    cropEditedRef.current = true;
     setRotDeg((prev) => {
       let next = (prev + delta) % 360;
       if (next < 0) next += 360;
@@ -587,10 +654,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     });
   };
 
+  const stepZoom = (delta: number) => {
+    cropEditedRef.current = true;
+    setZoomPct((prev) => Math.max(50, Math.min(300, prev + delta)));
+  };
+
   const resetCrop = () => {
+    cropEditedRef.current = true;
     dragRef.current = { dragging: false, startX: 0, startY: 0, x: 0, y: 0 };
     setZoomPct(100);
     setRotDeg(0);
+    setFitMode('contain');
+    drawCrop(100, 0, nameInput, 'contain');
   };
 
   const handleSave = () => {
@@ -598,7 +673,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       onToast('Password baru minimal 4 karakter.');
       return;
     }
-    const dataUrl = canvasRef.current ? canvasRef.current.toDataURL('image/png') : '';
+    let dataUrl = '';
+    if (hasCustomPhoto) {
+      if (!cropEditedRef.current && avatarUrl) {
+        dataUrl = avatarUrl;
+      } else if (canvasRef.current) {
+        dataUrl = canvasRef.current.toDataURL('image/png');
+      }
+    }
     onSaveProfile(nameInput.trim(), dataUrl, passInput.trim());
   };
 
@@ -684,19 +766,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       <div className="flex flex-col items-center gap-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-dashed border-slate-300 dark:border-slate-700 mb-4">
         <canvas
           ref={canvasRef}
-          width={240}
-          height={240}
+          width={320}
+          height={320}
           title="Geser foto untuk mengatur posisi crop"
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
+            const rect = e.currentTarget.getBoundingClientRect();
+            const scale = rect.width > 0 ? e.currentTarget.width / rect.width : 1;
             dragRef.current.dragging = true;
-            dragRef.current.startX = e.clientX - dragRef.current.x;
-            dragRef.current.startY = e.clientY - dragRef.current.y;
+            dragRef.current.startX = e.clientX * scale - dragRef.current.x;
+            dragRef.current.startY = e.clientY * scale - dragRef.current.y;
           }}
           onPointerMove={(e) => {
             if (!dragRef.current.dragging) return;
-            dragRef.current.x = e.clientX - dragRef.current.startX;
-            dragRef.current.y = e.clientY - dragRef.current.startY;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const scale = rect.width > 0 ? e.currentTarget.width / rect.width : 1;
+            cropEditedRef.current = true;
+            dragRef.current.x = e.clientX * scale - dragRef.current.startX;
+            dragRef.current.y = e.clientY * scale - dragRef.current.startY;
             scheduleDraw();
           }}
           onPointerUp={() => {
@@ -708,7 +795,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           className="w-40 h-40 rounded-full border-3 border-blue-600 cursor-grab active:cursor-grabbing touch-none shadow-md bg-slate-200 dark:bg-slate-700"
         />
         <span className="text-[11px] text-slate-500 dark:text-slate-400">
-          Geser foto dalam lingkaran · Zoom &amp; Putar 360°
+          Geser foto dalam lingkaran · Atur ukuran utuh atau isi penuh
         </span>
         <input
           type="file"
@@ -720,76 +807,165 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       </div>
 
       <div className="space-y-3">
-        <div>
-          <label
-            htmlFor="crop-zoom"
-            className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+        <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+          <button
+            type="button"
+            data-testid="crop-fit-contain"
+            onClick={() => {
+              cropEditedRef.current = true;
+              setFitMode('contain');
+              dragRef.current.x = 0;
+              dragRef.current.y = 0;
+            }}
+            className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+              fitMode === 'contain'
+                ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
           >
-            Zoom Foto (<span className="tabular-nums">{zoomPct}</span>%)
-          </label>
-          <input
-            id="crop-zoom"
-            type="range"
-            className="oz-range"
-            min={50}
-            max={300}
-            value={zoomPct}
-            onChange={(e) => setZoomPct(Number(e.target.value))}
-          />
+            Utuh (Tidak Terpotong)
+          </button>
+          <button
+            type="button"
+            data-testid="crop-fit-cover"
+            onClick={() => {
+              cropEditedRef.current = true;
+              setFitMode('cover');
+              dragRef.current.x = 0;
+              dragRef.current.y = 0;
+            }}
+            className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+              fitMode === 'cover'
+                ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            Isi Penuh Lingkaran
+          </button>
         </div>
 
-        <div>
-          <label
-            htmlFor="crop-rot"
-            className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
-          >
-            Putar Foto (<span className="tabular-nums">{rotDeg}</span>°)
-          </label>
-          <input
-            id="crop-rot"
-            type="range"
-            className="oz-range"
-            min={0}
-            max={360}
-            value={rotDeg}
-            onChange={(e) => setRotDeg(Number(e.target.value))}
-          />
-          <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Zoom (<span data-testid="crop-zoom-value" className="tabular-nums">{zoomPct}</span>%)
+          </span>
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => stepRotate(-90)}
-              className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1"
+              data-testid="crop-zoom-out"
+              onClick={() => stepZoom(-10)}
+              aria-label="Perkecil foto"
+              className="min-h-[34px] min-w-[38px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>-90°</span>
+              −
             </button>
             <button
               type="button"
-              onClick={() => stepRotate(90)}
-              className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1"
+              onClick={() => {
+                cropEditedRef.current = true;
+                setZoomPct(100);
+              }}
+              className="min-h-[34px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-semibold tabular-nums"
             >
-              <RotateCw className="w-3.5 h-3.5" />
-              <span>+90°</span>
+              100%
             </button>
             <button
               type="button"
-              onClick={resetCrop}
-              className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold"
+              data-testid="crop-zoom-in"
+              onClick={() => stepZoom(10)}
+              aria-label="Perbesar foto"
+              className="min-h-[34px] min-w-[38px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold"
             >
-              Reset
+              +
             </button>
           </div>
         </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => stepRotate(-90)}
+            className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>-90°</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => stepRotate(90)}
+            className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            <span>+90°</span>
+          </button>
+          <button
+            type="button"
+            onClick={resetCrop}
+            className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold"
+          >
+            Reset
+          </button>
+        </div>
+
+        <details className="rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/40 px-3 py-2">
+          <summary className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+            Atur Zoom &amp; Putar Halus (Opsional)
+          </summary>
+          <div className="space-y-2.5 pt-2.5">
+            <div>
+              <label
+                htmlFor="crop-zoom"
+                className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                Zoom Foto (<span className="tabular-nums">{zoomPct}</span>%)
+              </label>
+              <input
+                id="crop-zoom"
+                type="range"
+                className="oz-range"
+                min={50}
+                max={300}
+                value={zoomPct}
+                onChange={(e) => {
+                  cropEditedRef.current = true;
+                  setZoomPct(Number(e.target.value));
+                }}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="crop-rot"
+                className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                Putar Foto (<span className="tabular-nums">{rotDeg}</span>°)
+              </label>
+              <input
+                id="crop-rot"
+                type="range"
+                className="oz-range"
+                min={0}
+                max={360}
+                value={rotDeg}
+                onChange={(e) => {
+                  cropEditedRef.current = true;
+                  setRotDeg(Number(e.target.value));
+                }}
+              />
+            </div>
+          </div>
+        </details>
 
         <div>
           <label
             htmlFor="edit-display-name"
             className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
           >
-            Nama Tampilan Akun (Tidak mengubah nama resmi {officialName} di data Admin)
+            {currentView === 'admin'
+              ? 'Nama Akun Admin (Default: OZNET)'
+              : `Nama Tampilan Akun (Tidak mengubah nama resmi ${officialName} di data Admin)`}
           </label>
           <input
             id="edit-display-name"
+            data-testid="profile-display-name-input"
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
@@ -1048,7 +1224,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regPassInput, setRegPassInput] = useState('');
   const [showRegPass, setShowRegPass] = useState(false);
 
-  const [adminEmailInput, setAdminEmailInput] = useState('');
+  const [adminWaInput, setAdminWaInput] = useState('');
   const [adminPassInput, setAdminPassInput] = useState('');
   const [showAdminPass, setShowAdminPass] = useState(false);
 
@@ -1088,12 +1264,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleAdminSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const res = verifyAdminLogin(adminEmailInput, adminPassInput, adminPassword);
+    const res = verifyAdminLogin(adminWaInput, adminPassInput, adminPassword);
     if (!res.ok) {
       setAuthError(res.error);
       return;
     }
-    onLogin('admin', 'ADM-001', 'Admin OZdigiFinance', ADMIN_EMAIL);
+    onLogin('admin', 'ADM-001', 'Admin OZdigiFinance', ADMIN_WHATSAPP);
   };
 
   const handleFingerprintLogin = async (role: 'customer' | 'admin') => {
@@ -1108,7 +1284,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     if (res.credential.role === 'admin') {
-      onLogin('admin', res.credential.userId || 'ADM-001', 'Admin OZdigiFinance', ADMIN_EMAIL);
+      onLogin('admin', res.credential.userId || 'ADM-001', 'Admin OZdigiFinance', ADMIN_WHATSAPP);
       return;
     }
 
@@ -1136,6 +1312,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       title={
         loginTab === 'register'
           ? 'Daftar Nasabah Baru OZdigiFinance'
+          : loginTab === 'admin'
+          ? 'Login Admin OZdigiFinance'
           : 'Masuk ke OZdigiFinance'
       }
       onClose={onClose}
@@ -1429,24 +1607,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         </form>
       ) : (
-        <form onSubmit={handleAdminSubmit} className="space-y-3.5">
+        <form onSubmit={handleAdminSubmit} className="space-y-3.5" data-testid="auth-admin-form">
           <div>
             <label
-              htmlFor="auth-admin-email"
+              htmlFor="auth-admin-wa"
               className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
             >
-              Email Admin
+              No. WhatsApp Admin
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
-                id="auth-admin-email"
-                type="email"
-                value={adminEmailInput}
-                onChange={(e) => setAdminEmailInput(e.target.value)}
-                placeholder="Masukkan email admin"
+                id="auth-admin-wa"
+                data-testid="auth-admin-wa-input"
+                type="tel"
+                value={adminWaInput}
+                onChange={(e) => setAdminWaInput(e.target.value)}
+                placeholder="Contoh: 08568080847"
                 required
-                className="w-full min-h-[42px] pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+                className="w-full min-h-[42px] pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
@@ -1463,6 +1642,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="auth-admin-pass"
+                  data-testid="auth-admin-pass-input"
                   type={showAdminPass ? 'text' : 'password'}
                   value={adminPassInput}
                   onChange={(e) => setAdminPassInput(e.target.value)}
@@ -2794,4 +2974,265 @@ export const LoanPayModal: React.FC<LoanPayModalProps> = ({
     </ModalShell>
   );
 };
+
+/* =====================================================================
+   13. ADMIN ADD SAVINGS CUSTOMER MODAL (NASABAH BARU / NASABAH PINJAMAN)
+   ===================================================================== */
+interface AddSavingsCustomerModalProps {
+  customers: CustomerRegistryItem[];
+  savingsAccounts: SavingsAccount[];
+  onSubmit: (payload: {
+    mode: 'existing' | 'new';
+    selectedCustomerId?: string;
+    officialName?: string;
+    whatsapp?: string;
+    program: SavingsFrequency;
+    initialDeposit: number;
+  }) => { ok: boolean; error?: string };
+  onClose: () => void;
+}
+
+export const AddSavingsCustomerModal: React.FC<AddSavingsCustomerModalProps> = ({
+  customers,
+  savingsAccounts,
+  onSubmit,
+  onClose,
+}) => {
+  const existingSavIds = new Set(savingsAccounts.map((s) => s.id));
+  const availableLoanCustomers = customers.filter((c) => !existingSavIds.has(c.id));
+
+  const [mode, setMode] = useState<'new' | 'existing'>(
+    availableLoanCustomers.length > 0 ? 'existing' : 'new'
+  );
+  const [selectedCustId, setSelectedCustId] = useState<string>(
+    availableLoanCustomers[0]?.id ?? ''
+  );
+  const [newName, setNewName] = useState('');
+  const [newWhatsapp, setNewWhatsapp] = useState('');
+  const [program, setProgram] = useState<SavingsFrequency>('Menabung Mingguan');
+  const [initialDepositInput, setInitialDepositInput] = useState('0');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    const parsedInitial = Number(initialDepositInput || 0);
+    if (!Number.isFinite(parsedInitial) || parsedInitial < 0) {
+      setErrorMsg('Nominal setoran awal tidak valid.');
+      return;
+    }
+
+    const res = onSubmit({
+      mode,
+      selectedCustomerId: mode === 'existing' ? selectedCustId : undefined,
+      officialName: mode === 'new' ? newName : undefined,
+      whatsapp: mode === 'new' ? newWhatsapp : undefined,
+      program,
+      initialDeposit: Math.round(parsedInitial),
+    });
+
+    if (!res.ok) {
+      setErrorMsg(res.error ?? 'Gagal menambahkan nasabah tabungan.');
+    }
+  };
+
+  return (
+    <ModalShell title="Tambah Nasabah Tabungan" onClose={onClose}>
+      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4">
+        <button
+          type="button"
+          data-testid="add-sav-mode-existing"
+          onClick={() => {
+            setMode('existing');
+            setErrorMsg(null);
+          }}
+          className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            mode === 'existing'
+              ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-300'
+          }`}
+        >
+          Nasabah Pinjaman
+        </button>
+        <button
+          type="button"
+          data-testid="add-sav-mode-new"
+          onClick={() => {
+            setMode('new');
+            setErrorMsg(null);
+          }}
+          className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            mode === 'new'
+              ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+              : 'text-slate-600 dark:text-slate-300'
+          }`}
+        >
+          Nasabah Baru
+        </button>
+      </div>
+
+      {errorMsg && (
+        <div
+          role="alert"
+          className="mb-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-xs font-semibold text-rose-700 dark:text-rose-300"
+        >
+          {errorMsg}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        {mode === 'existing' ? (
+          <div>
+            <label
+              htmlFor="add-sav-existing-select"
+              className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
+              Pilih Nasabah Pinjaman
+            </label>
+            <select
+              id="add-sav-existing-select"
+              data-testid="add-sav-existing-select"
+              value={selectedCustId}
+              onChange={(e) => setSelectedCustId(e.target.value)}
+              disabled={availableLoanCustomers.length === 0}
+              className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 disabled:opacity-60"
+            >
+              {availableLoanCustomers.length === 0 ? (
+                <option value="">Semua nasabah pinjaman sudah punya rekening tabungan</option>
+              ) : (
+                availableLoanCustomers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.officialName} ({c.id} · WA: {c.whatsapp})
+                  </option>
+                ))
+              )}
+            </select>
+            {availableLoanCustomers.length === 0 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1">
+                Pilih tab &ldquo;Nasabah Baru&rdquo; untuk mendaftarkan penabung baru.
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            <div>
+              <label
+                htmlFor="add-sav-new-name"
+                className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                Nama Lengkap Nasabah Baru
+              </label>
+              <input
+                id="add-sav-new-name"
+                data-testid="add-sav-new-name"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Contoh: Siti Aminah"
+                required
+                className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="add-sav-new-wa"
+                className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                No. WhatsApp (Otomatis untuk Login Nasabah)
+              </label>
+              <input
+                id="add-sav-new-wa"
+                data-testid="add-sav-new-wa"
+                type="tel"
+                value={newWhatsapp}
+                onChange={(e) => setNewWhatsapp(e.target.value)}
+                placeholder="Contoh: 081234567890"
+                required
+                className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </>
+        )}
+
+        <div>
+          <label
+            htmlFor="add-sav-program"
+            className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+          >
+            Pilihan Program Menabung
+          </label>
+          <select
+            id="add-sav-program"
+            data-testid="add-sav-program-select"
+            value={program}
+            onChange={(e) => setProgram(e.target.value as SavingsFrequency)}
+            className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100"
+          >
+            <option value="Menabung Harian">Menabung Harian</option>
+            <option value="Menabung Mingguan">Menabung Mingguan</option>
+            <option value="Menabung Bulanan">Menabung Bulanan</option>
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="add-sav-initial"
+            className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1"
+          >
+            Setoran Awal (Rp, Opsional)
+          </label>
+          <input
+            id="add-sav-initial"
+            data-testid="add-sav-initial-input"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step="any"
+            value={initialDepositInput}
+            onChange={(e) => setInitialDepositInput(e.target.value)}
+            placeholder="0"
+            className="w-full min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-mono-num text-slate-900 dark:text-slate-100"
+          />
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {[
+              { val: 0, label: 'Rp 0' },
+              { val: 50000, label: 'Rp 50 rb' },
+              { val: 100000, label: 'Rp 100 rb' },
+              { val: 250000, label: 'Rp 250 rb' },
+            ].map((p) => (
+              <button
+                key={p.val}
+                type="button"
+                onClick={() => setInitialDepositInput(String(p.val))}
+                className="min-h-[34px] px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 text-[11px] font-semibold"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-[40px] px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            data-testid="add-sav-submit-btn"
+            disabled={mode === 'existing' && availableLoanCustomers.length === 0}
+            className="min-h-[40px] px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold"
+          >
+            Simpan Rekening Tabungan
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+};
+
 

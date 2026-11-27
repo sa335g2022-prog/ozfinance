@@ -3,6 +3,8 @@ import type {
   LoanCalculation,
   LoanItem,
   LoanScheduleRow,
+  SavingsAccount,
+  SavingsFrequency,
   TransactionRecord,
   UserSession,
 } from '../types/app';
@@ -230,6 +232,7 @@ export function isValidSessionPayload(
 }
 
 export const ADMIN_EMAIL = 'alfauzy80@gmail.com';
+export const ADMIN_WHATSAPP = '08568080847';
 export const DEFAULT_ADMIN_PASSWORD = '0000';
 
 export function normalizePhoneDigits(phone: string): string {
@@ -273,13 +276,13 @@ export function verifyCustomerLogin(
 }
 
 export function verifyAdminLogin(
-  emailInput: string,
+  whatsappInput: string,
   passwordInput: string,
   adminPassword: string = DEFAULT_ADMIN_PASSWORD
 ): { ok: true } | { ok: false; error: string } {
-  const cleanEmail = emailInput.trim().toLowerCase();
-  if (cleanEmail !== ADMIN_EMAIL) {
-    return { ok: false, error: 'Email Admin tidak terdaftar.' };
+  const normalizedWa = normalizePhoneDigits(whatsappInput);
+  if (!normalizedWa || normalizedWa !== ADMIN_WHATSAPP) {
+    return { ok: false, error: 'No. WhatsApp Admin tidak terdaftar.' };
   }
   if (passwordInput !== adminPassword) {
     return { ok: false, error: 'Password Admin salah.' };
@@ -534,5 +537,116 @@ export function formatPaymentSystemMessage(params: {
     '',
     'Terima kasih telah melakukan pembayaran.',
   ].join('\n');
+}
+
+export function createSavingsAccountAssignment(params: {
+  mode: 'existing' | 'new';
+  existingCustomers: CustomerRegistryItem[];
+  existingSavings: SavingsAccount[];
+  selectedCustomerId?: string;
+  officialName?: string;
+  whatsapp?: string;
+  program: SavingsFrequency;
+  initialDeposit?: number;
+  dateLabel?: string;
+}):
+  | {
+      ok: true;
+      account: SavingsAccount;
+      newCustomer?: CustomerRegistryItem;
+      defaultPassword?: string;
+      initialDeposit: number;
+    }
+  | { ok: false; error: string } {
+  const safeInitial =
+    typeof params.initialDeposit === 'number' && Number.isFinite(params.initialDeposit)
+      ? Math.max(0, Math.round(params.initialDeposit))
+      : 0;
+  const dateLabel = params.dateLabel || '26 Nov 2026';
+
+  if (params.mode === 'existing') {
+    const cust = params.existingCustomers.find((c) => c.id === params.selectedCustomerId);
+    if (!cust) {
+      return { ok: false, error: 'Pilih nasabah pinjaman terlebih dahulu.' };
+    }
+    if (params.existingSavings.some((s) => s.id === cust.id)) {
+      return {
+        ok: false,
+        error: `${cust.officialName} (${cust.id}) sudah memiliki rekening tabungan aktif.`,
+      };
+    }
+    return {
+      ok: true,
+      account: {
+        id: cust.id,
+        officialName: cust.officialName,
+        whatsapp: cust.whatsapp,
+        program: params.program,
+        routine: safeInitial > 0 ? `${formatRupiah(safeInitial)} / setoran` : 'Rp 0 / setoran',
+        balance: safeInitial,
+        lastDate: safeInitial > 0 ? dateLabel : '-',
+        status: 'Aktif',
+      },
+      initialDeposit: safeInitial,
+    };
+  }
+
+  const reg = registerNewCustomerAccount({
+    existingCustomers: params.existingCustomers,
+    officialName: params.officialName ?? '',
+    whatsapp: params.whatsapp ?? '',
+  });
+  if (!reg.ok) {
+    return reg;
+  }
+
+  return {
+    ok: true,
+    newCustomer: reg.customer,
+    defaultPassword: reg.password,
+    account: {
+      id: reg.customer.id,
+      officialName: reg.customer.officialName,
+      whatsapp: reg.customer.whatsapp,
+      program: params.program,
+      routine: safeInitial > 0 ? `${formatRupiah(safeInitial)} / setoran` : 'Rp 0 / setoran',
+      balance: safeInitial,
+      lastDate: safeInitial > 0 ? dateLabel : '-',
+      status: 'Aktif',
+    },
+    initialDeposit: safeInitial,
+  };
+}
+
+export type AvatarFitMode = 'contain' | 'cover';
+
+export interface AvatarDrawLayout {
+  dw: number;
+  dh: number;
+  coverDw: number;
+  coverDh: number;
+  isNonSquare: boolean;
+}
+
+export function computeAvatarDrawLayout(params: {
+  canvasWidth: number;
+  canvasHeight: number;
+  imgWidth: number;
+  imgHeight: number;
+  fitMode: AvatarFitMode;
+}): AvatarDrawLayout {
+  const { canvasWidth, canvasHeight, imgWidth, imgHeight, fitMode } = params;
+  const safeW = Math.max(1, imgWidth);
+  const safeH = Math.max(1, imgHeight);
+  const containRatio = Math.min(canvasWidth / safeW, canvasHeight / safeH);
+  const coverRatio = Math.max(canvasWidth / safeW, canvasHeight / safeH);
+  const activeRatio = fitMode === 'contain' ? containRatio : coverRatio;
+  return {
+    dw: safeW * activeRatio,
+    dh: safeH * activeRatio,
+    coverDw: safeW * coverRatio,
+    coverDh: safeH * coverRatio,
+    isNonSquare: Math.abs(safeW - safeH) > Math.max(2, Math.min(safeW, safeH) * 0.03),
+  };
 }
 

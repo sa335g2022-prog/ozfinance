@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ADMIN_EMAIL,
+  ADMIN_WHATSAPP,
   applyLoanPayment,
   buildDeterministicLoanTxId,
   buildLoanItem,
   buildTransactionsCsv,
+  computeAvatarDrawLayout,
   computeLoan,
   computeSessionSignature,
+  createSavingsAccountAssignment,
   DEFAULT_ADMIN_PASSWORD,
   ensureCustomerDefaultPassword,
   formatPaymentSystemMessage,
@@ -125,11 +127,11 @@ test('verifyCustomerLogin authenticates WA + default WA password and respects ch
   assert.equal(verifyCustomerLogin([cust], customMap, '6287736661267', 'rahasia99').ok, true);
 });
 
-test('verifyAdminLogin checks email alfauzy80@gmail.com and password 0000', () => {
-  assert.equal(verifyAdminLogin(ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD).ok, true);
-  assert.equal(verifyAdminLogin('ALFAUZY80@GMAIL.COM', '0000').ok, true);
-  assert.equal(verifyAdminLogin('other@gmail.com', '0000').ok, false);
-  assert.equal(verifyAdminLogin(ADMIN_EMAIL, '9999').ok, false);
+test('verifyAdminLogin checks WhatsApp 08568080847 and password 0000', () => {
+  assert.equal(verifyAdminLogin(ADMIN_WHATSAPP, DEFAULT_ADMIN_PASSWORD).ok, true);
+  assert.equal(verifyAdminLogin('+62 856-8080-847', '0000').ok, true);
+  assert.equal(verifyAdminLogin('081234567890', '0000').ok, false);
+  assert.equal(verifyAdminLogin(ADMIN_WHATSAPP, '9999').ok, false);
 });
 
 test('applyLoanPayment updates monthly installment and full payoff accurately', () => {
@@ -352,6 +354,103 @@ test('PWA helpers enforce standalone suppression, cooldown reminder, and iOS UA 
     detectIOSBrowser('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36'),
     false
   );
+});
+
+test('createSavingsAccountAssignment creates savings for existing loan customers and new customers cleanly', () => {
+  const loanCust = summarizeCustomerFromLoans({
+    id: 'OZF-00001',
+    officialName: "B'DONK",
+    whatsapp: '087736661267',
+    status: 'Aktif',
+    loans: [
+      buildLoanItem({
+        id: 'LN-1',
+        productName: 'Paylater HP',
+        monthlyInstallment: 751_581,
+        paidInstallments: 8,
+        totalInstallments: 12,
+        dueDateDay: 'Tgl 25',
+      }),
+    ],
+  });
+
+  const loanSavRes = createSavingsAccountAssignment({
+    mode: 'existing',
+    existingCustomers: [loanCust],
+    existingSavings: [],
+    selectedCustomerId: 'OZF-00001',
+    program: 'Menabung Mingguan',
+    initialDeposit: 150_000,
+  });
+  assert.equal(loanSavRes.ok, true);
+  if (loanSavRes.ok) {
+    assert.equal(loanSavRes.account.id, 'OZF-00001');
+    assert.equal(loanSavRes.account.balance, 150_000);
+    assert.equal(loanSavRes.newCustomer, undefined);
+  }
+
+  const dupExisting = createSavingsAccountAssignment({
+    mode: 'existing',
+    existingCustomers: [loanCust],
+    existingSavings: loanSavRes.ok ? [loanSavRes.account] : [],
+    selectedCustomerId: 'OZF-00001',
+    program: 'Menabung Harian',
+  });
+  assert.equal(dupExisting.ok, false);
+
+  const newSavRes = createSavingsAccountAssignment({
+    mode: 'new',
+    existingCustomers: [loanCust],
+    existingSavings: [],
+    officialName: 'SITI AMINAH',
+    whatsapp: '+62 812-3456-0000',
+    program: 'Menabung Harian',
+    initialDeposit: 50_000,
+  });
+  assert.equal(newSavRes.ok, true);
+  if (newSavRes.ok && newSavRes.newCustomer) {
+    assert.equal(newSavRes.newCustomer.id, 'OZF-00002');
+    assert.equal(newSavRes.newCustomer.loans.length, 0);
+    assert.equal(newSavRes.account.id, 'OZF-00002');
+    assert.equal(newSavRes.account.balance, 50_000);
+    assert.equal(newSavRes.defaultPassword, '081234560000');
+  }
+});
+
+test('computeAvatarDrawLayout preserves full uncropped bounds in contain mode and fills circle in cover mode', () => {
+  const wideContain = computeAvatarDrawLayout({
+    canvasWidth: 320,
+    canvasHeight: 320,
+    imgWidth: 1600,
+    imgHeight: 800,
+    fitMode: 'contain',
+  });
+  assert.equal(wideContain.isNonSquare, true);
+  assert.equal(wideContain.dw, 320);
+  assert.equal(wideContain.dh, 160);
+  assert.equal(wideContain.coverDw, 640);
+  assert.equal(wideContain.coverDh, 320);
+
+  const portraitContain = computeAvatarDrawLayout({
+    canvasWidth: 320,
+    canvasHeight: 320,
+    imgWidth: 900,
+    imgHeight: 1800,
+    fitMode: 'contain',
+  });
+  assert.equal(portraitContain.dw, 160);
+  assert.equal(portraitContain.dh, 320);
+
+  const squareLogo = computeAvatarDrawLayout({
+    canvasWidth: 320,
+    canvasHeight: 320,
+    imgWidth: 192,
+    imgHeight: 192,
+    fitMode: 'contain',
+  });
+  assert.equal(squareLogo.isNonSquare, false);
+  assert.equal(squareLogo.dw, 320);
+  assert.equal(squareLogo.dh, 320);
 });
 
 
